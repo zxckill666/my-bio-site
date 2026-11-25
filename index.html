@@ -32,7 +32,7 @@
           </span>
         </div>
 
-        <div class="progress-track-wrap">
+        <div id="progress-track-wrap" class="progress-track-wrap">
           <div class="progress-rail">
             <div id="progress-fill" class="progress-fill"></div>
           </div>
@@ -44,7 +44,7 @@
             min="0"
             max="100"
             value="0"
-            step="0.1"
+            step="0.05"
             aria-label="Перемотка трека"
           >
         </div>
@@ -61,17 +61,36 @@
           </svg>
         </button>
 
-        <button id="mute-btn" class="player-action-btn" type="button" aria-label="Звук вкл/выкл">
-          <svg id="icon-sound-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
-            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
-          </svg>
-          <svg id="icon-sound-off" class="hidden-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
-            <line x1="23" y1="9" x2="17" y2="15"></line>
-            <line x1="17" y1="9" x2="23" y2="15"></line>
-          </svg>
-        </button>
+        <div id="volume-control" class="volume-control">
+          <div id="volume-drawer" class="volume-drawer">
+            <div class="volume-bar-visual">
+              <div id="volume-fill" class="volume-fill"></div>
+              <div id="volume-thumb" class="volume-thumb"></div>
+            </div>
+            <input
+              id="volume-slider"
+              class="volume-slider"
+              type="range"
+              min="0"
+              max="1"
+              value="0.75"
+              step="0.01"
+              aria-label="Громкость"
+            >
+          </div>
+
+          <button id="mute-btn" class="player-action-btn" type="button" aria-label="Звук вкл/выкл">
+            <svg id="icon-sound-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+              <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+            </svg>
+            <svg id="icon-sound-off" class="hidden-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+              <line x1="23" y1="9" x2="17" y2="15"></line>
+              <line x1="17" y1="9" x2="23" y2="15"></line>
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
   </header>

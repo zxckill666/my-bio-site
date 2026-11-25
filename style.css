@@ -101,7 +101,7 @@ body {
 .top-player {
   pointer-events: auto;
   width: 100%;
-  max-width: 390px;
+  max-width: 425px;
   display: flex;
   align-items: center;
   gap: 11px;
@@ -167,12 +167,13 @@ body {
   flex-shrink: 0;
 }
 
-/* Полоса прогресса с частичками */
+/* Полоса прогресса с плавным драгом и частичками */
 .progress-track-wrap {
   position: relative;
   height: 18px;
   display: flex;
   align-items: center;
+  touch-action: none;
 }
 
 .progress-rail {
@@ -182,6 +183,12 @@ body {
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.14);
   overflow: visible;
+  transition: height 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.progress-track-wrap:hover .progress-rail,
+.progress-track-wrap.scrubbing .progress-rail {
+  height: 6px;
 }
 
 .progress-fill {
@@ -191,24 +198,31 @@ body {
   border-radius: 999px;
   background: linear-gradient(90deg, #38bdf8, #818cf8, #f472b6);
   box-shadow: 0 0 10px rgba(129, 140, 248, 0.55);
+  transition: width 0.06s linear;
+}
+
+.progress-track-wrap.scrubbing .progress-fill {
+  transition: none;
 }
 
 .progress-fill::after {
   content: "";
   position: absolute;
-  right: -5px;
+  right: -6px;
   top: 50%;
-  transform: translateY(-50%);
-  width: 10px;
-  height: 10px;
+  transform: translateY(-50%) scale(0.92);
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
   background: #ffffff;
   box-shadow: 0 0 10px rgba(255, 255, 255, 0.9);
-  transition: transform 0.2s ease;
+  transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.22s ease;
 }
 
-.progress-track-wrap:hover .progress-fill::after {
+.progress-track-wrap:hover .progress-fill::after,
+.progress-track-wrap.scrubbing .progress-fill::after {
   transform: translateY(-50%) scale(1.25);
+  box-shadow: 0 0 14px rgba(129, 140, 248, 0.95), 0 0 6px #ffffff;
 }
 
 .progress-particles {
@@ -230,7 +244,7 @@ body {
   margin: 0;
 }
 
-/* Кнопки управления плеером */
+/* Кнопки управления и выезжающая полоса громкости */
 .top-player-actions {
   display: flex;
   align-items: center;
@@ -249,6 +263,7 @@ body {
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  flex-shrink: 0;
   transition:
     transform 0.2s cubic-bezier(0.22, 1, 0.36, 1),
     background-color 0.2s ease,
@@ -274,6 +289,93 @@ body {
 
 .hidden-icon {
   display: none;
+}
+
+.volume-control {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Плавное выдвижение и свёртывание полосы громкости */
+.volume-drawer {
+  position: relative;
+  width: 0px;
+  height: 28px;
+  opacity: 0;
+  transform: translateX(8px) scaleX(0.82);
+  transform-origin: right center;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  padding: 0;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0);
+  pointer-events: none;
+  transition:
+    width 0.36s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.26s ease,
+    transform 0.36s cubic-bezier(0.22, 1, 0.36, 1),
+    padding 0.36s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.25s ease,
+    background-color 0.25s ease;
+}
+
+.volume-control.open .volume-drawer {
+  width: 82px;
+  opacity: 1;
+  transform: translateX(0) scaleX(1);
+  padding: 0 8px;
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.07);
+  pointer-events: auto;
+}
+
+.volume-bar-visual {
+  position: relative;
+  width: 100%;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  pointer-events: none;
+}
+
+.volume-fill {
+  width: 75%;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #60a5fa, #a78bfa);
+  box-shadow: 0 0 8px rgba(167, 139, 250, 0.5);
+  transition: width 0.08s ease-out;
+}
+
+.volume-thumb {
+  position: absolute;
+  top: 50%;
+  left: 75%;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.85);
+  transform: translate(-50%, -50%) scale(0.9);
+  transition: left 0.08s ease-out, transform 0.2s ease;
+}
+
+.volume-control.open .volume-thumb {
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.volume-slider {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  margin: 0;
 }
 
 /* Основной контейнер и 3D-перспектива */
