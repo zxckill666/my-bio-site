@@ -3,35 +3,48 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Мои ссылки — Bio</title>
+  <title>Матвей — Bio</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <main class="container">
-    <header class="profile">
-      <img class="avatar-img" src="avatar.jpg" alt="Аватар">
+  <!-- Холст для снежинок на фоне и за курсором -->
+  <canvas id="snow-canvas"></canvas>
+
+  <!-- Стартовый экран с блюром и надписью >my bio< -->
+  <div id="entry-screen" class="entry-overlay">
+    <button id="enter-btn" class="entry-text" type="button">
+      <span class="bracket">&gt;</span>my bio<span class="bracket">&lt;</span>
+    </button>
+  </div>
+
+  <!-- Основной контент -->
+  <main id="main-content" class="container hidden">
+    <header class="profile flip-item" style="--delay: 0.05s;">
+      <img class="avatar-img" src="avatar.jpg" alt="Аватар Матвея">
       <h1>Матвей</h1>
       <p class="bio">16 y. o. вайбкодер, делаю разные проекты на python, C++.</p>
     </header>
 
     <nav class="links" aria-label="Основные ссылки">
-      <a class="link-btn primary" href="https://t.me/sekailauren" target="_blank" rel="noopener">
-        Telegram
+      <a class="link-btn tg-btn flip-item" style="--delay: 0.18s;" href="https://t.me/sekailauren" target="_blank" rel="noopener">
+        <span>Telegram</span>
       </a>
-      <a class="link-btn" href="https://github.com/zxckill666" target="_blank" rel="noopener">
-        GitHub
+      <a class="link-btn gray-btn flip-item" style="--delay: 0.30s;" href="https://github.com/zxckill666" target="_blank" rel="noopener">
+        <span>GitHub</span>
       </a>
-      <a class="link-btn" href="https://soundcloud.com/kawaimonster87" target="_blank" rel="noopener">
-        SoundCloud
+      <a class="link-btn gray-btn flip-item" style="--delay: 0.42s;" href="https://soundcloud.com/kawaimonster87" target="_blank" rel="noopener">
+        <span>SoundCloud</span>
       </a>
-      <a class="link-btn" href="mailto:bilyaeva.02031993@outlook.com">
-        Написать на почту
+      <a class="link-btn gray-btn flip-item" style="--delay: 0.54s;" href="mailto:bilyaeva.02031993@outlook.com">
+        <span>Написать на почту</span>
       </a>
     </nav>
 
-    <footer class="footer">
+    <footer class="footer flip-item" style="--delay: 0.66s;">
       <span>© 2026</span>
     </footer>
   </main>
+
+  <script src="script.js"></script>
 </body>
 </html>
