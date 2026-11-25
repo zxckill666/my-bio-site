@@ -18,6 +18,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const durationTimeEl = document.getElementById('duration-time');
 
   let lastNonZeroVolume = parseFloat(volumeSlider.value) || 0.75;
+  let targetVolumePercent = lastNonZeroVolume * 100;
+  let smoothVolumePercent = targetVolumePercent;
+
+  let targetProgressPercent = 0;
+  let smoothProgressPercent = 0;
+
   audio.volume = lastNonZeroVolume;
 
   // 1. Логика входа по клику на >my bio<
@@ -57,7 +63,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function syncMuteState() {
-    const isMutedNow = audio.muted || audio.volume <= 0.02;
+    const isMutedNow = audio.muted || audio.volume <= 0.025;
     if (isMutedNow) {
       iconSoundOn.classList.add('hidden-icon');
       iconSoundOff.classList.remove('hidden-icon');
@@ -67,15 +73,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  function syncVolumeUI(val) {
+  function applyVolumeValue(val) {
     const clamped = Math.max(0, Math.min(1, val));
-    const pct = clamped * 100;
-    volumeFill.style.width = `${pct}%`;
-    volumeThumb.style.left = `${pct}%`;
+    targetVolumePercent = clamped * 100;
     volumeSlider.value = clamped;
 
-    // Если опустили ползунок в самый низ (<= 0.03) — вырубаем звук полностью
-    if (clamped <= 0.03) {
+    if (clamped <= 0.025) {
       audio.volume = 0;
       audio.muted = true;
     } else {
@@ -84,30 +87,29 @@ document.addEventListener('DOMContentLoaded', () => {
       lastNonZeroVolume = clamped;
     }
     syncMuteState();
+    spawnVolumeBurst(3);
   }
 
-  syncVolumeUI(lastNonZeroVolume);
-
-  // Плавное открытие/закрытие ползунка громкости при наведении
+  // Плавное открытие/закрытие ползунка громкости вниз при наведении
   let volumeCloseTimer = null;
 
   function openVolumeDrawer() {
     clearTimeout(volumeCloseTimer);
     volumeControl.classList.add('open');
+    resizeVolCanvas();
   }
 
   function scheduleCloseVolumeDrawer() {
     clearTimeout(volumeCloseTimer);
     volumeCloseTimer = setTimeout(() => {
-      if (!volumeSlider.matches(':active')) {
+      if (!isVolumeDragging) {
         volumeControl.classList.remove('open');
       }
-    }, 320);
+    }, 340);
   }
 
   volumeControl.addEventListener('mouseenter', openVolumeDrawer);
   volumeControl.addEventListener('mouseleave', scheduleCloseVolumeDrawer);
-  volumeSlider.addEventListener('pointerup', scheduleCloseVolumeDrawer);
 
   playPauseBtn.addEventListener('click', () => {
     if (audio.paused) {
@@ -118,25 +120,60 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   muteBtn.addEventListener('click', () => {
-    if (audio.muted || audio.volume <= 0.03) {
-      const restoreVal = lastNonZeroVolume > 0.05 ? lastNonZeroVolume : 0.7;
-      syncVolumeUI(restoreVal);
+    openVolumeDrawer();
+    if (audio.muted || audio.volume <= 0.025) {
+      const restoreVal = lastNonZeroVolume > 0.05 ? lastNonZeroVolume : 0.75;
+      applyVolumeValue(restoreVal);
     } else {
       lastNonZeroVolume = audio.volume;
-      syncVolumeUI(0);
+      applyVolumeValue(0);
     }
   });
 
+  let isVolumeDragging = false;
+
+  function setVolumeFromClientX(clientX) {
+    const rect = volumeSlider.getBoundingClientRect();
+    if (rect.width <= 0) return;
+    const ratio = (clientX - rect.left) / rect.width;
+    applyVolumeValue(ratio);
+  }
+
   volumeSlider.addEventListener('input', () => {
     openVolumeDrawer();
-    syncVolumeUI(parseFloat(volumeSlider.value));
+    applyVolumeValue(parseFloat(volumeSlider.value));
   });
+
+  volumeSlider.addEventListener('pointerdown', (e) => {
+    isVolumeDragging = true;
+    openVolumeDrawer();
+    volumeSlider.setPointerCapture(e.pointerId);
+    setVolumeFromClientX(e.clientX);
+  });
+
+  volumeSlider.addEventListener('pointermove', (e) => {
+    if (!isVolumeDragging) return;
+    setVolumeFromClientX(e.clientX);
+    spawnVolumeBurst(2);
+  });
+
+  function stopVolumeDrag(e) {
+    if (!isVolumeDragging) return;
+    isVolumeDragging = false;
+    if (volumeSlider.hasPointerCapture(e.pointerId)) {
+      volumeSlider.releasePointerCapture(e.pointerId);
+    }
+    scheduleCloseVolumeDrawer();
+  }
+
+  volumeSlider.addEventListener('pointerup', stopVolumeDrag);
+  volumeSlider.addEventListener('pointercancel', stopVolumeDrag);
 
   audio.addEventListener('play', syncPlayState);
   audio.addEventListener('pause', syncPlayState);
   audio.addEventListener('ended', () => {
     audio.currentTime = 0;
-    updateProgressUI(0);
+    targetProgressPercent = 0;
     syncPlayState();
   });
 
@@ -144,21 +181,16 @@ document.addEventListener('DOMContentLoaded', () => {
     durationTimeEl.textContent = formatTime(audio.duration);
   });
 
-  // 3. Плавный драг перемотки трека
+  // 3. Сверхплавный драг перемотки трека
   let isScrubbing = false;
-
-  function updateProgressUI(percent) {
-    const clamped = Math.max(0, Math.min(100, percent));
-    progressFill.style.width = `${clamped}%`;
-    seekSlider.value = clamped;
-  }
 
   function setSeekFromClientX(clientX) {
     const rect = seekSlider.getBoundingClientRect();
     if (rect.width <= 0) return;
     const ratio = (clientX - rect.left) / rect.width;
     const pct = Math.max(0, Math.min(100, ratio * 100));
-    updateProgressUI(pct);
+    targetProgressPercent = pct;
+    seekSlider.value = pct;
 
     if (Number.isFinite(audio.duration) && audio.duration > 0) {
       const targetTime = (pct / 100) * audio.duration;
@@ -172,13 +204,14 @@ document.addEventListener('DOMContentLoaded', () => {
     currentTimeEl.textContent = formatTime(audio.currentTime);
     if (Number.isFinite(audio.duration) && audio.duration > 0) {
       durationTimeEl.textContent = formatTime(audio.duration);
-      updateProgressUI((audio.currentTime / audio.duration) * 100);
+      targetProgressPercent = (audio.currentTime / audio.duration) * 100;
+      seekSlider.value = targetProgressPercent;
     }
   });
 
   seekSlider.addEventListener('input', () => {
     const pct = parseFloat(seekSlider.value);
-    updateProgressUI(pct);
+    targetProgressPercent = pct;
     if (Number.isFinite(audio.duration) && audio.duration > 0) {
       audio.currentTime = (pct / 100) * audio.duration;
       currentTimeEl.textContent = formatTime(audio.currentTime);
@@ -190,12 +223,15 @@ document.addEventListener('DOMContentLoaded', () => {
     progressTrackWrap.classList.add('scrubbing');
     seekSlider.setPointerCapture(e.pointerId);
     setSeekFromClientX(e.clientX);
+    for (let i = 0; i < 4; i++) {
+      spawnProgressParticle();
+    }
   });
 
   seekSlider.addEventListener('pointermove', (e) => {
     if (!isScrubbing) return;
     setSeekFromClientX(e.clientX);
-    for (let i = 0; i < 2; i++) {
+    for (let i = 0; i < 3; i++) {
       spawnProgressParticle();
     }
   });
@@ -212,10 +248,14 @@ document.addEventListener('DOMContentLoaded', () => {
   seekSlider.addEventListener('pointerup', endScrub);
   seekSlider.addEventListener('pointercancel', endScrub);
 
-  // 4. Частички вдоль ползунка прогресса песни
+  // 4. Частички вдоль ползунка прогресса и ползунка громкости
   const pCanvas = document.getElementById('progress-particles');
   const pCtx = pCanvas.getContext('2d');
   const barParticles = [];
+
+  const vCanvas = document.getElementById('volume-particles');
+  const vCtx = vCanvas.getContext('2d');
+  const volParticles = [];
 
   function resizeBarCanvas() {
     const rect = pCanvas.getBoundingClientRect();
@@ -225,35 +265,79 @@ document.addEventListener('DOMContentLoaded', () => {
     pCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
 
+  function resizeVolCanvas() {
+    const rect = vCanvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    vCanvas.width = Math.max(1, Math.floor(rect.width * dpr));
+    vCanvas.height = Math.max(1, Math.floor(rect.height * dpr));
+    vCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
   resizeBarCanvas();
-  window.addEventListener('resize', resizeBarCanvas);
+  resizeVolCanvas();
+  window.addEventListener('resize', () => {
+    resizeBarCanvas();
+    resizeVolCanvas();
+  });
 
   const particleColors = ['#38bdf8', '#818cf8', '#f472b6', '#ffffff'];
 
   function spawnProgressParticle() {
     const rect = pCanvas.getBoundingClientRect();
-    const pct = parseFloat(seekSlider.value) || 0;
-    const thumbX = ((rect.width - 12) * (pct / 100)) + 6;
+    if (rect.width <= 0) return;
+    const thumbX = ((rect.width - 14) * (smoothProgressPercent / 100)) + 7;
     const centerY = rect.height / 2;
 
     barParticles.push({
       x: thumbX + (Math.random() - 0.5) * 6,
       y: centerY + (Math.random() - 0.5) * 4,
-      vx: (Math.random() - 0.85) * 1.1,
-      vy: (Math.random() - 0.5) * 1.3 - 0.25,
+      vx: (Math.random() - 0.85) * 1.15,
+      vy: (Math.random() - 0.5) * 1.4 - 0.25,
       size: Math.random() * 2.2 + 1,
       alpha: 0.95,
-      decay: Math.random() * 0.025 + 0.02,
+      decay: Math.random() * 0.022 + 0.018,
       color: particleColors[Math.floor(Math.random() * particleColors.length)]
     });
   }
 
-  function renderBarParticles() {
-    const rect = pCanvas.getBoundingClientRect();
-    pCtx.clearRect(0, 0, rect.width, rect.height);
+  function spawnVolumeBurst(count = 2) {
+    const rect = vCanvas.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return;
+    const xPos = ((rect.width - 18) * (smoothVolumePercent / 100)) + 9;
+    const yPos = rect.height / 2;
 
-    const isActive = !audio.paused || isScrubbing || progressTrackWrap.matches(':hover');
-    if (isActive && Math.random() < 0.72) {
+    for (let i = 0; i < count; i++) {
+      volParticles.push({
+        x: xPos + (Math.random() - 0.5) * 5,
+        y: yPos + (Math.random() - 0.5) * 4,
+        vx: (Math.random() - 0.5) * 1.1,
+        vy: -Math.random() * 1.2 - 0.3,
+        size: Math.random() * 1.9 + 0.9,
+        alpha: 0.95,
+        decay: Math.random() * 0.028 + 0.02,
+        color: particleColors[Math.floor(Math.random() * particleColors.length)]
+      });
+    }
+  }
+
+  function renderSlidersAndParticles() {
+    // Сверхплавная интерполяция прогресса
+    const progFactor = isScrubbing ? 0.42 : 0.16;
+    smoothProgressPercent += (targetProgressPercent - smoothProgressPercent) * progFactor;
+    progressFill.style.width = `${smoothProgressPercent.toFixed(3)}%`;
+
+    // Сверхплавная интерполяция громкости
+    const volFactor = isVolumeDragging ? 0.32 : 0.14;
+    smoothVolumePercent += (targetVolumePercent - smoothVolumePercent) * volFactor;
+    volumeFill.style.width = `${smoothVolumePercent.toFixed(3)}%`;
+    volumeThumb.style.left = `${smoothVolumePercent.toFixed(3)}%`;
+
+    // Частицы прогресса
+    const pRect = pCanvas.getBoundingClientRect();
+    pCtx.clearRect(0, 0, pRect.width, pRect.height);
+
+    const progActive = !audio.paused || isScrubbing || progressTrackWrap.matches(':hover');
+    if (progActive && Math.random() < 0.75) {
       spawnProgressParticle();
     }
 
@@ -278,10 +362,39 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    requestAnimationFrame(renderBarParticles);
+    // Частицы громкости
+    const vRect = vCanvas.getBoundingClientRect();
+    vCtx.clearRect(0, 0, vRect.width, vRect.height);
+
+    if (volumeControl.classList.contains('open') && (isVolumeDragging || Math.random() < 0.35)) {
+      spawnVolumeBurst(1);
+    }
+
+    for (let i = volParticles.length - 1; i >= 0; i--) {
+      const vp = volParticles[i];
+      vp.x += vp.vx;
+      vp.y += vp.vy;
+      vp.alpha -= vp.decay;
+
+      if (vp.alpha <= 0) {
+        volParticles.splice(i, 1);
+      } else {
+        vCtx.save();
+        vCtx.globalAlpha = Math.max(0, vp.alpha);
+        vCtx.fillStyle = vp.color;
+        vCtx.shadowBlur = 5;
+        vCtx.shadowColor = vp.color;
+        vCtx.beginPath();
+        vCtx.arc(vp.x, vp.y, vp.size, 0, Math.PI * 2);
+        vCtx.fill();
+        vCtx.restore();
+      }
+    }
+
+    requestAnimationFrame(renderSlidersAndParticles);
   }
 
-  renderBarParticles();
+  renderSlidersAndParticles();
 
   // 5. Анимация снежинок на фоне и за курсором
   const canvas = document.getElementById('snow-canvas');

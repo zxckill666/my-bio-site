@@ -9,7 +9,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 84px 16px 28px;
+  padding: 88px 16px 28px;
   font-family: 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
   background-color: #050505;
   background-image: radial-gradient(circle at 50% 0%, #121215 0%, #050505 75%);
@@ -101,7 +101,7 @@ body {
 .top-player {
   pointer-events: auto;
   width: 100%;
-  max-width: 425px;
+  max-width: 410px;
   display: flex;
   align-items: center;
   gap: 11px;
@@ -183,7 +183,7 @@ body {
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.14);
   overflow: visible;
-  transition: height 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: height 0.25s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .progress-track-wrap:hover .progress-rail,
@@ -198,11 +198,7 @@ body {
   border-radius: 999px;
   background: linear-gradient(90deg, #38bdf8, #818cf8, #f472b6);
   box-shadow: 0 0 10px rgba(129, 140, 248, 0.55);
-  transition: width 0.06s linear;
-}
-
-.progress-track-wrap.scrubbing .progress-fill {
-  transition: none;
+  will-change: width;
 }
 
 .progress-fill::after {
@@ -221,15 +217,15 @@ body {
 
 .progress-track-wrap:hover .progress-fill::after,
 .progress-track-wrap.scrubbing .progress-fill::after {
-  transform: translateY(-50%) scale(1.25);
+  transform: translateY(-50%) scale(1.28);
   box-shadow: 0 0 14px rgba(129, 140, 248, 0.95), 0 0 6px #ffffff;
 }
 
 .progress-particles {
   position: absolute;
-  inset: -8px -6px;
-  width: calc(100% + 12px);
-  height: calc(100% + 16px);
+  inset: -10px -8px;
+  width: calc(100% + 16px);
+  height: calc(100% + 20px);
   pointer-events: none;
   z-index: 2;
 }
@@ -244,7 +240,7 @@ body {
   margin: 0;
 }
 
-/* Кнопки управления и выезжающая полоса громкости */
+/* Кнопки управления и выезжающая вниз полоса громкости */
 .top-player-actions {
   display: flex;
   align-items: center;
@@ -294,43 +290,51 @@ body {
 .volume-control {
   position: relative;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 6px;
 }
 
-/* Плавное выдвижение и свёртывание полосы громкости */
+/* Выезд вниз под кнопку звука */
 .volume-drawer {
-  position: relative;
-  width: 0px;
-  height: 28px;
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  width: 96px;
+  height: 0px;
   opacity: 0;
-  transform: translateX(8px) scaleX(0.82);
-  transform-origin: right center;
+  transform: translateY(-8px) scale(0.92);
+  transform-origin: top right;
   overflow: hidden;
-  display: flex;
-  align-items: center;
-  padding: 0;
-  border-radius: 9px;
-  background: rgba(255, 255, 255, 0.05);
+  border-radius: 11px;
+  background: rgba(14, 14, 18, 0.82);
   border: 1px solid rgba(255, 255, 255, 0);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.75);
   pointer-events: none;
   transition:
-    width 0.36s cubic-bezier(0.22, 1, 0.36, 1),
-    opacity 0.26s ease,
-    transform 0.36s cubic-bezier(0.22, 1, 0.36, 1),
-    padding 0.36s cubic-bezier(0.22, 1, 0.36, 1),
-    border-color 0.25s ease,
-    background-color 0.25s ease;
+    height 0.38s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.28s ease,
+    transform 0.38s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.25s ease;
 }
 
 .volume-control.open .volume-drawer {
-  width: 82px;
+  height: 28px;
   opacity: 1;
-  transform: translateX(0) scaleX(1);
-  padding: 0 8px;
-  border-color: rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.07);
+  transform: translateY(0) scale(1);
+  border-color: rgba(255, 255, 255, 0.16);
   pointer-events: auto;
+}
+
+.volume-inner {
+  position: relative;
+  width: 100%;
+  height: 28px;
+  padding: 0 9px;
+  display: flex;
+  align-items: center;
+  touch-action: none;
 }
 
 .volume-bar-visual {
@@ -346,9 +350,9 @@ body {
   width: 75%;
   height: 100%;
   border-radius: 999px;
-  background: linear-gradient(90deg, #60a5fa, #a78bfa);
-  box-shadow: 0 0 8px rgba(167, 139, 250, 0.5);
-  transition: width 0.08s ease-out;
+  background: linear-gradient(90deg, #38bdf8, #a78bfa, #f472b6);
+  box-shadow: 0 0 8px rgba(167, 139, 250, 0.55);
+  will-change: width;
 }
 
 .volume-thumb {
@@ -359,13 +363,23 @@ body {
   height: 9px;
   border-radius: 50%;
   background: #ffffff;
-  box-shadow: 0 0 8px rgba(255, 255, 255, 0.85);
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.9);
   transform: translate(-50%, -50%) scale(0.9);
-  transition: left 0.08s ease-out, transform 0.2s ease;
+  transition: transform 0.2s ease;
+  will-change: left;
 }
 
 .volume-control.open .volume-thumb {
-  transform: translate(-50%, -50%) scale(1);
+  transform: translate(-50%, -50%) scale(1.05);
+}
+
+.volume-particles {
+  position: absolute;
+  inset: -6px 0;
+  width: 100%;
+  height: calc(100% + 12px);
+  pointer-events: none;
+  z-index: 2;
 }
 
 .volume-slider {
@@ -376,6 +390,7 @@ body {
   opacity: 0;
   cursor: pointer;
   margin: 0;
+  z-index: 3;
 }
 
 /* Основной контейнер и 3D-перспектива */
