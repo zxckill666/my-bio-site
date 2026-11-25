@@ -85,6 +85,185 @@ body {
   50% { opacity: 1; }
 }
 
+/* Плавающий медиаплеер в стиле прикрепленного фото */
+.mini-player {
+  position: fixed;
+  left: 20px;
+  bottom: 20px;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 280px;
+  padding: 8px 12px 8px 8px;
+  border-radius: 16px;
+  background: rgba(12, 12, 15, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.65);
+  cursor: grab;
+  touch-action: none;
+  transition:
+    width 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    padding 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 0.35s ease,
+    border-color 0.35s ease,
+    box-shadow 0.35s ease;
+}
+
+.mini-player.expanded {
+  width: 355px;
+  padding: 10px 14px 10px 10px;
+  background: rgba(16, 16, 20, 0.78);
+  border-color: rgba(255, 255, 255, 0.24);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.85);
+}
+
+.mini-player.dragging {
+  cursor: grabbing;
+  transition: none;
+}
+
+.player-cover {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  transition: width 0.35s ease, height 0.35s ease;
+}
+
+.mini-player.expanded .player-cover {
+  width: 44px;
+  height: 44px;
+}
+
+.player-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.player-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: 0.2px;
+  transition: font-size 0.35s ease;
+}
+
+.mini-player.expanded .player-title {
+  font-size: 14.5px;
+}
+
+.player-timeline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.player-time {
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  color: rgba(255, 255, 255, 0.52);
+  flex-shrink: 0;
+}
+
+/* Кастомные ползунки */
+.player-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  background: rgba(255, 255, 255, 0.2);
+  height: 3px;
+  border-radius: 999px;
+  cursor: pointer;
+  outline: none;
+}
+
+.seek-slider {
+  flex: 1;
+  min-width: 40px;
+}
+
+.volume-slider {
+  width: 52px;
+  transition: width 0.35s ease;
+}
+
+.mini-player.expanded .volume-slider {
+  width: 66px;
+}
+
+.player-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #09090b;
+  border: 1.5px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.8);
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.player-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+.player-slider::-moz-range-thumb {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #09090b;
+  border: 1.5px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.8);
+  cursor: pointer;
+}
+
+.player-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.play-btn {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.88);
+  cursor: pointer;
+  border-radius: 50%;
+  transition: transform 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+}
+
+.play-btn:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.1);
+  transform: scale(1.08);
+}
+
+.play-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.hidden-icon {
+  display: none;
+}
+
 /* Основной контейнер и 3D-перспектива */
 .container {
   position: relative;
