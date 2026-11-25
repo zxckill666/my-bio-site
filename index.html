@@ -4,27 +4,477 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>sekailauren — Bio</title>
-  <link rel="stylesheet" href="style.css">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
+      font-family: 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
+      background-color: #050505;
+      background-image: radial-gradient(circle at 50% 0%, #141418 0%, #050505 75%);
+      color: #f3f4f6;
+      overflow-x: hidden;
+      user-select: none;
+    }
+
+    #snow-canvas {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    /* Стартовый экран >my bio< */
+    .entry-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(5, 5, 5, 0.72);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      transition: opacity 0.6s ease, backdrop-filter 0.6s ease, visibility 0.6s ease;
+    }
+
+    .entry-overlay.fade-out {
+      opacity: 0;
+      backdrop-filter: blur(0px);
+      -webkit-backdrop-filter: blur(0px);
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .entry-text {
+      background: none;
+      border: none;
+      color: #ffffff;
+      font-family: 'Consolas', 'Courier New', monospace;
+      font-size: clamp(28px, 5vw, 40px);
+      font-weight: 700;
+      letter-spacing: 3px;
+      cursor: pointer;
+      padding: 16px 28px;
+      text-shadow: 0 0 18px rgba(255, 255, 255, 0.45);
+      transition: transform 0.25s ease, text-shadow 0.25s ease;
+    }
+
+    .entry-text .bracket {
+      color: #6b7280;
+      transition: color 0.25s ease;
+    }
+
+    .entry-text:hover {
+      transform: scale(1.07);
+      text-shadow: 0 0 28px rgba(255, 255, 255, 0.85);
+    }
+
+    .entry-text:hover .bracket {
+      color: #38bdf8;
+    }
+
+    /* Плавающий медиаплеер */
+    .mini-player {
+      position: fixed;
+      left: 20px;
+      bottom: 20px;
+      z-index: 60;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 286px;
+      padding: 8px 12px 8px 8px;
+      border-radius: 16px;
+      background: rgba(12, 12, 15, 0.65);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.7);
+      cursor: grab;
+      touch-action: none;
+      transition:
+        width 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+        padding 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+        background-color 0.3s ease,
+        border-color 0.3s ease,
+        box-shadow 0.3s ease;
+    }
+
+    .mini-player.expanded {
+      width: 360px;
+      padding: 10px 14px 10px 10px;
+      background: rgba(16, 16, 20, 0.82);
+      border-color: rgba(255, 255, 255, 0.26);
+      box-shadow: 0 14px 36px rgba(0, 0, 0, 0.88);
+    }
+
+    .mini-player.dragging {
+      cursor: grabbing;
+      transition: none;
+    }
+
+    .player-cover-wrap {
+      position: relative;
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      overflow: hidden;
+      flex-shrink: 0;
+      background: #18181b;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+      color: #d4d4d8;
+      transition: width 0.35s ease, height 0.35s ease;
+    }
+
+    .mini-player.expanded .player-cover-wrap {
+      width: 44px;
+      height: 44px;
+    }
+
+    .player-cover-wrap img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .player-body {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .player-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+    }
+
+    .player-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #ffffff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .mini-player.expanded .player-title {
+      font-size: 14px;
+    }
+
+    .upload-mp3-btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      color: #d4d4d8;
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 6px;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: background-color 0.2s ease, color 0.2s ease;
+    }
+
+    .upload-mp3-btn:hover {
+      background: rgba(255, 255, 255, 0.18);
+      color: #ffffff;
+    }
+
+    .player-timeline {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .player-time {
+      font-size: 10px;
+      font-variant-numeric: tabular-nums;
+      color: rgba(255, 255, 255, 0.55);
+      flex-shrink: 0;
+    }
+
+    .player-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      background: rgba(255, 255, 255, 0.22);
+      height: 3px;
+      border-radius: 999px;
+      cursor: pointer;
+      outline: none;
+    }
+
+    .seek-slider {
+      flex: 1;
+      min-width: 36px;
+    }
+
+    .volume-slider {
+      width: 48px;
+      transition: width 0.35s ease;
+    }
+
+    .mini-player.expanded .volume-slider {
+      width: 64px;
+    }
+
+    .player-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #09090b;
+      border: 1.5px solid rgba(255, 255, 255, 0.9);
+      cursor: pointer;
+    }
+
+    .player-slider::-moz-range-thumb {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #09090b;
+      border: 1.5px solid rgba(255, 255, 255, 0.9);
+      cursor: pointer;
+    }
+
+    .player-controls {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .play-btn {
+      width: 26px;
+      height: 26px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      border: none;
+      color: #ffffff;
+      cursor: pointer;
+      border-radius: 50%;
+      transition: background-color 0.2s ease, transform 0.15s ease;
+    }
+
+    .play-btn:hover {
+      background: rgba(255, 255, 255, 0.12);
+      transform: scale(1.08);
+    }
+
+    .play-btn svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    .hidden-icon {
+      display: none;
+    }
+
+    /* Основной блок с 3D-переворотом */
+    .container {
+      position: relative;
+      z-index: 10;
+      width: 100%;
+      max-width: 420px;
+      text-align: center;
+      perspective: 1000px;
+    }
+
+    .container.hidden {
+      visibility: hidden;
+    }
+
+    .flip-item {
+      opacity: 0;
+      transform: perspective(900px) rotateX(-85deg) translateY(25px) scale(0.92);
+      transform-origin: top center;
+      transition:
+        opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+        transform 0.75s cubic-bezier(0.16, 1, 0.3, 1);
+      transition-delay: var(--delay, 0s);
+    }
+
+    .container.revealed .flip-item {
+      opacity: 1;
+      transform: perspective(900px) rotateX(0deg) translateY(0) scale(1);
+    }
+
+    .profile {
+      margin-bottom: 28px;
+    }
+
+    .avatar-wrap {
+      position: relative;
+      width: 92px;
+      height: 92px;
+      margin: 0 auto 16px;
+      border-radius: 50%;
+      overflow: hidden;
+      background: #141417;
+      border: 2px solid #27272a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+      font-weight: 700;
+      color: #e5e7eb;
+      box-shadow: 0 0 25px rgba(0, 0, 0, 0.9);
+      transition: transform 0.3s ease, border-color 0.3s ease;
+    }
+
+    .avatar-wrap:hover {
+      transform: scale(1.05);
+      border-color: #52525b;
+    }
+
+    .avatar-wrap img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    h1 {
+      font-size: 25px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: #ffffff;
+    }
+
+    .bio {
+      font-size: 14.5px;
+      line-height: 1.5;
+      color: #9ca3af;
+    }
+
+    .links {
+      display: flex;
+      flex-direction: column;
+      gap: 13px;
+    }
+
+    .link-btn {
+      position: relative;
+      display: block;
+      width: 100%;
+      padding: 15px 20px;
+      border-radius: 12px;
+      text-decoration: none;
+      font-size: 15.5px;
+      font-weight: 600;
+      overflow: hidden;
+      transition:
+        transform 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+        box-shadow 0.25s ease,
+        background-color 0.25s ease,
+        border-color 0.25s ease;
+    }
+
+    .link-btn::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 60%;
+      height: 100%;
+      background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.16),
+        transparent
+      );
+      transform: skewX(-25deg);
+      transition: left 0.55s ease;
+    }
+
+    .link-btn:hover::before {
+      left: 140%;
+    }
+
+    .link-btn:hover {
+      transform: translateY(-3px) scale(1.015);
+    }
+
+    .tg-btn {
+      background: linear-gradient(135deg, #229ED9 0%, #1677a8 100%);
+      color: #ffffff;
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      box-shadow: 0 4px 18px rgba(34, 158, 217, 0.22);
+    }
+
+    .tg-btn:hover {
+      background: linear-gradient(135deg, #29a9e6 0%, #1b85ba 100%);
+      border-color: #7dd3fc;
+      box-shadow: 0 8px 26px rgba(34, 158, 217, 0.45);
+    }
+
+    .gray-btn {
+      background: #141417;
+      color: #e5e7eb;
+      border: 1px solid #27272a;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+    }
+
+    .gray-btn:hover {
+      background: #1e1e23;
+      color: #ffffff;
+      border-color: #52525b;
+      box-shadow: 0 8px 22px rgba(255, 255, 255, 0.07);
+    }
+
+    .footer {
+      margin-top: 32px;
+      font-size: 13px;
+      color: #52525b;
+    }
+  </style>
 </head>
 <body>
-  <!-- Холст для снежинок на фоне и за курсором -->
   <canvas id="snow-canvas"></canvas>
 
-  <!-- Стартовый экран с блюром и надписью >my bio< -->
   <div id="entry-screen" class="entry-overlay">
     <button id="enter-btn" class="entry-text" type="button">
       <span class="bracket">&gt;</span>my bio<span class="bracket">&lt;</span>
     </button>
   </div>
 
-  <!-- Плавающий мини-плеер в стиле скрина -->
   <aside id="mini-player" class="mini-player" aria-label="Аудиоплеер">
-    <audio id="audio-element" src="track.mp3" preload="metadata"></audio>
+    <audio id="audio-element" preload="metadata"></audio>
+    <input id="mp3-file-input" type="file" accept="audio/*" style="display: none;">
 
-    <img id="player-cover" class="player-cover" src="avatar.jpg" alt="Обложка трека">
+    <div class="player-cover-wrap">
+      <span>SL</span>
+      <img src="avatar.jpg" alt="" onerror="this.remove()">
+    </div>
 
     <div class="player-body">
-      <div id="player-title" class="player-title">again</div>
+      <div class="player-top">
+        <div id="player-title" class="player-title">again</div>
+        <button id="upload-mp3-btn" class="upload-mp3-btn" type="button" title="Выбрать MP3 файл">MP3</button>
+      </div>
       <div class="player-timeline">
         <span id="current-time" class="player-time">00:00</span>
         <input
@@ -65,10 +515,12 @@
     </div>
   </aside>
 
-  <!-- Основной контент -->
   <main id="main-content" class="container hidden">
     <header class="profile flip-item" style="--delay: 0.05s;">
-      <img class="avatar-img" src="avatar.jpg" alt="Аватар sekailauren">
+      <div class="avatar-wrap">
+        <span>SL</span>
+        <img src="avatar.jpg" alt="Аватар sekailauren" onerror="this.remove()">
+      </div>
       <h1>sekailauren</h1>
       <p class="bio">16 y. o. вайбкодер, делаю разные проекты на python, C++.</p>
     </header>
@@ -93,6 +545,288 @@
     </footer>
   </main>
 
-  <script src="script.js"></script>
+  <script>
+    // Поменяй название трека здесь (если загружаешь свой MP3 вручную, подставится имя файла без .mp3)
+    const DEFAULT_TRACK_TITLE = 'again';
+    const DEFAULT_TRACK_FILE = 'track.mp3';
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const entryScreen = document.getElementById('entry-screen');
+      const enterBtn = document.getElementById('enter-btn');
+      const mainContent = document.getElementById('main-content');
+      const audio = document.getElementById('audio-element');
+
+      const player = document.getElementById('mini-player');
+      const playerTitle = document.getElementById('player-title');
+      const uploadMp3Btn = document.getElementById('upload-mp3-btn');
+      const mp3FileInput = document.getElementById('mp3-file-input');
+      const playPauseBtn = document.getElementById('play-pause-btn');
+      const iconPlay = document.getElementById('icon-play');
+      const iconPause = document.getElementById('icon-pause');
+      const seekSlider = document.getElementById('seek-slider');
+      const volumeSlider = document.getElementById('volume-slider');
+      const currentTimeEl = document.getElementById('current-time');
+      const durationTimeEl = document.getElementById('duration-time');
+
+      playerTitle.textContent = DEFAULT_TRACK_TITLE;
+      audio.src = DEFAULT_TRACK_FILE;
+      audio.volume = parseFloat(volumeSlider.value);
+
+      // Вход по клику на >my bio<
+      enterBtn.addEventListener('click', () => {
+        entryScreen.classList.add('fade-out');
+        mainContent.classList.remove('hidden');
+        requestAnimationFrame(() => {
+          mainContent.classList.add('revealed');
+        });
+        if (audio.src) {
+          audio.play().catch(() => {});
+        }
+      });
+
+      // Загрузка любого локального MP3 через кнопку MP3 в плеере
+      uploadMp3Btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        mp3FileInput.click();
+      });
+
+      mp3FileInput.addEventListener('change', () => {
+        const file = mp3FileInput.files && mp3FileInput.files[0];
+        if (!file) return;
+        const objectUrl = URL.createObjectURL(file);
+        audio.src = objectUrl;
+        playerTitle.textContent = file.name.replace(/\.[^/.]+$/, '');
+        audio.play().catch(() => {});
+      });
+
+      // Увеличение при наведении и возврат через 5 секунд после ухода курсора
+      let shrinkTimer = null;
+
+      function expandPlayer() {
+        clearTimeout(shrinkTimer);
+        player.classList.add('expanded');
+      }
+
+      function scheduleShrinkPlayer() {
+        clearTimeout(shrinkTimer);
+        shrinkTimer = setTimeout(() => {
+          if (!player.classList.contains('dragging')) {
+            player.classList.remove('expanded');
+          }
+        }, 5000);
+      }
+
+      player.addEventListener('mouseenter', expandPlayer);
+      player.addEventListener('mouseleave', scheduleShrinkPlayer);
+
+      function formatTime(sec) {
+        if (!Number.isFinite(sec) || sec < 0) return '00:00';
+        const mins = Math.floor(sec / 60);
+        const secs = Math.floor(sec % 60);
+        return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+      }
+
+      function updatePlayIcon() {
+        if (audio.paused) {
+          iconPlay.classList.remove('hidden-icon');
+          iconPause.classList.add('hidden-icon');
+        } else {
+          iconPlay.classList.add('hidden-icon');
+          iconPause.classList.remove('hidden-icon');
+        }
+      }
+
+      playPauseBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (!audio.src) return;
+        if (audio.paused) {
+          audio.play().catch(() => {});
+        } else {
+          audio.pause();
+        }
+      });
+
+      audio.addEventListener('play', updatePlayIcon);
+      audio.addEventListener('pause', updatePlayIcon);
+      audio.addEventListener('ended', () => {
+        audio.currentTime = 0;
+        audio.play().catch(() => {});
+      });
+
+      audio.addEventListener('loadedmetadata', () => {
+        if (Number.isFinite(audio.duration) && audio.duration > 0) {
+          seekSlider.max = audio.duration;
+          durationTimeEl.textContent = formatTime(audio.duration);
+        }
+      });
+
+      audio.addEventListener('timeupdate', () => {
+        if (!seekSlider.matches(':active')) {
+          seekSlider.value = audio.currentTime || 0;
+        }
+        currentTimeEl.textContent = formatTime(audio.currentTime);
+        if (Number.isFinite(audio.duration) && audio.duration > 0) {
+          durationTimeEl.textContent = formatTime(audio.duration);
+        }
+      });
+
+      seekSlider.addEventListener('input', () => {
+        if (Number.isFinite(audio.duration) && audio.duration > 0) {
+          audio.currentTime = parseFloat(seekSlider.value);
+          currentTimeEl.textContent = formatTime(audio.currentTime);
+        }
+      });
+
+      volumeSlider.addEventListener('input', () => {
+        audio.volume = parseFloat(volumeSlider.value);
+      });
+
+      [seekSlider, volumeSlider, playPauseBtn, uploadMp3Btn].forEach((el) => {
+        el.addEventListener('pointerdown', (e) => e.stopPropagation());
+      });
+
+      // Перетаскивание плеера в любую точку экрана
+      let isDragging = false;
+      let offsetX = 0;
+      let offsetY = 0;
+
+      player.addEventListener('pointerdown', (e) => {
+        if (e.button !== undefined && e.button !== 0 && e.pointerType === 'mouse') return;
+
+        isDragging = true;
+        player.classList.add('dragging');
+        expandPlayer();
+
+        const rect = player.getBoundingClientRect();
+        offsetX = e.clientX - rect.left;
+        offsetY = e.clientY - rect.top;
+
+        player.style.left = `${rect.left}px`;
+        player.style.top = `${rect.top}px`;
+        player.style.right = 'auto';
+        player.style.bottom = 'auto';
+
+        player.setPointerCapture(e.pointerId);
+      });
+
+      player.addEventListener('pointermove', (e) => {
+        if (!isDragging) return;
+        const rect = player.getBoundingClientRect();
+        const maxX = window.innerWidth - rect.width - 8;
+        const maxY = window.innerHeight - rect.height - 8;
+
+        let nextX = e.clientX - offsetX;
+        let nextY = e.clientY - offsetY;
+
+        nextX = Math.max(8, Math.min(nextX, Math.max(8, maxX)));
+        nextY = Math.max(8, Math.min(nextY, Math.max(8, maxY)));
+
+        player.style.left = `${nextX}px`;
+        player.style.top = `${nextY}px`;
+      });
+
+      function stopDrag(e) {
+        if (!isDragging) return;
+        isDragging = false;
+        player.classList.remove('dragging');
+        if (player.hasPointerCapture(e.pointerId)) {
+          player.releasePointerCapture(e.pointerId);
+        }
+        scheduleShrinkPlayer();
+      }
+
+      player.addEventListener('pointerup', stopDrag);
+      player.addEventListener('pointercancel', stopDrag);
+
+      // Снежинки на фоне и за курсором
+      const canvas = document.getElementById('snow-canvas');
+      const ctx = canvas.getContext('2d');
+
+      let width = (canvas.width = window.innerWidth);
+      let height = (canvas.height = window.innerHeight);
+
+      window.addEventListener('resize', () => {
+        width = canvas.width = window.innerWidth;
+        height = canvas.height = window.innerHeight;
+      });
+
+      const ambientSnow = [];
+      const cursorSnow = [];
+
+      for (let i = 0; i < 45; i++) {
+        ambientSnow.push({
+          x: Math.random() * width,
+          y: Math.random() * height,
+          radius: Math.random() * 2 + 0.8,
+          speedY: Math.random() * 0.7 + 0.25,
+          speedX: (Math.random() - 0.5) * 0.35,
+          opacity: Math.random() * 0.4 + 0.15
+        });
+      }
+
+      function spawnCursorFlakes(x, y) {
+        for (let i = 0; i < 2; i++) {
+          cursorSnow.push({
+            x: x + (Math.random() - 0.5) * 14,
+            y: y + (Math.random() - 0.5) * 14,
+            radius: Math.random() * 2.5 + 1.2,
+            speedX: (Math.random() - 0.5) * 1.3,
+            speedY: Math.random() * 1.1 + 0.4,
+            opacity: 0.95,
+            decay: Math.random() * 0.016 + 0.012
+          });
+        }
+      }
+
+      window.addEventListener('mousemove', (e) => spawnCursorFlakes(e.clientX, e.clientY));
+      window.addEventListener('touchmove', (e) => {
+        if (e.touches.length > 0) {
+          spawnCursorFlakes(e.touches[0].clientX, e.touches[0].clientY);
+        }
+      }, { passive: true });
+
+      function drawFlake(x, y, radius, opacity) {
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
+        ctx.shadowBlur = 6;
+        ctx.shadowColor = 'rgba(255, 255, 255, 0.55)';
+        ctx.fill();
+      }
+
+      function animate() {
+        ctx.clearRect(0, 0, width, height);
+
+        for (let i = 0; i < ambientSnow.length; i++) {
+          const f = ambientSnow[i];
+          f.y += f.speedY;
+          f.x += f.speedX;
+          if (f.y > height) {
+            f.y = -5;
+            f.x = Math.random() * width;
+          }
+          if (f.x > width) f.x = 0;
+          if (f.x < 0) f.x = width;
+          drawFlake(f.x, f.y, f.radius, f.opacity);
+        }
+
+        for (let i = cursorSnow.length - 1; i >= 0; i--) {
+          const p = cursorSnow[i];
+          p.x += p.speedX;
+          p.y += p.speedY;
+          p.opacity -= p.decay;
+          if (p.opacity <= 0) {
+            cursorSnow.splice(i, 1);
+          } else {
+            drawFlake(p.x, p.y, p.radius, p.opacity);
+          }
+        }
+
+        requestAnimationFrame(animate);
+      }
+
+      animate();
+    });
+  </script>
 </body>
 </html>
