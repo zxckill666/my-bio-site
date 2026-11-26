@@ -11,7 +11,7 @@
   <canvas id="snow-canvas"></canvas>
 
   <!-- Счетчик просмотров с глазиком в правом верхнем углу -->
-  <div id="views-badge" class="views-badge" title="Просмотры страницы">
+  <div id="views-badge" class="views-badge" title="Уникальные просмотры страницы">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
       <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
       <circle cx="12" cy="12" r="3"></circle>
@@ -120,31 +120,45 @@
       <p class="bio">16 y. o. вайбкодер, делаю разные проекты на python, C++.</p>
     </header>
 
-    <!-- Компактный Discord-виджет с раскрытием RPC при наведении -->
+    <!-- Discord-профиль с рамкой аватара, 3D-подсветкой и выезжающими кастомным статусом + RPC -->
     <section id="discord-card" class="discord-card flip-item" style="--delay: 0.12s;" aria-label="Discord профиль и активность">
+      <div class="discord-glow" aria-hidden="true"></div>
+
       <div class="discord-compact">
         <div class="discord-avatar-box">
           <img id="dc-avatar" class="discord-avatar" src="avatar.jpg" alt="Discord аватар">
+          <img id="dc-avatar-decoration" class="discord-avatar-decoration hidden-icon" src="" alt="" aria-hidden="true">
           <span id="dc-status-dot" class="dc-status-dot offline" title="Статус Discord"></span>
         </div>
 
         <div class="discord-user-meta">
           <div class="discord-name-row">
             <span id="dc-username" class="discord-username">sekailauren</span>
-            <span id="dc-status-text" class="discord-status-label">offline</span>
+            <span id="dc-handle" class="discord-handle">@hurukoo</span>
+            <span id="dc-status-text" class="discord-status-badge offline">offline</span>
           </div>
-          <p id="dc-custom-status" class="discord-custom-status">Наведи, чтобы посмотреть RPC</p>
+          <p id="dc-summary-line" class="discord-summary-line">Наведи, чтобы раскрыть статус и RPC</p>
         </div>
 
-        <span class="discord-expand-hint" aria-hidden="true">RPC ▾</span>
+        <span class="discord-expand-hint" aria-hidden="true">
+          <span class="hint-label">RPC</span>
+          <span class="hint-arrow">▾</span>
+        </span>
       </div>
 
       <div id="discord-rpc-drawer" class="discord-rpc-drawer">
+        <!-- Кастомный статус (выезжает плавно при наведении) -->
+        <div id="dc-custom-box" class="dc-custom-box hidden-icon">
+          <span id="dc-custom-emoji" class="dc-custom-emoji"></span>
+          <span id="dc-custom-text" class="dc-custom-text"></span>
+        </div>
+
+        <!-- Блок активности RPC -->
         <div class="discord-rpc-inner">
           <img id="dc-rpc-img" class="dc-rpc-img hidden-icon" src="" alt="Иконка активности">
           <div class="dc-rpc-text">
             <div id="dc-rpc-name" class="dc-rpc-name">Нет активного RPC</div>
-            <div id="dc-rpc-details" class="dc-rpc-line"></div>
+            <div id="dc-rpc-details" class="dc-rpc-line">Запусти игру, код или музыку в Discord</div>
             <div id="dc-rpc-state" class="dc-rpc-line"></div>
           </div>
           <div id="dc-rpc-elapsed" class="dc-rpc-elapsed"></div>

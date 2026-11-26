@@ -26,13 +26,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
   audio.volume = lastNonZeroVolume;
 
-  // 00. Живой Discord профиль и RPC через Lanyard (без секретного ключа в клиенте)
+  // 00. Живой Discord профиль, рамка аватара, кастомный статус и RPC через Lanyard
   const DISCORD_USER_ID = '1378047204119547989';
+  const discordCard = document.getElementById('discord-card');
   const dcAvatarEl = document.getElementById('dc-avatar');
+  const dcDecorationEl = document.getElementById('dc-avatar-decoration');
   const dcStatusDotEl = document.getElementById('dc-status-dot');
   const dcUsernameEl = document.getElementById('dc-username');
+  const dcHandleEl = document.getElementById('dc-handle');
   const dcStatusTextEl = document.getElementById('dc-status-text');
-  const dcCustomStatusEl = document.getElementById('dc-custom-status');
+  const dcSummaryLineEl = document.getElementById('dc-summary-line');
+  const dcCustomBoxEl = document.getElementById('dc-custom-box');
+  const dcCustomEmojiEl = document.getElementById('dc-custom-emoji');
+  const dcCustomTextEl = document.getElementById('dc-custom-text');
   const dcRpcImgEl = document.getElementById('dc-rpc-img');
   const dcRpcNameEl = document.getElementById('dc-rpc-name');
   const dcRpcDetailsEl = document.getElementById('dc-rpc-details');
@@ -40,6 +46,31 @@ document.addEventListener('DOMContentLoaded', () => {
   const dcRpcElapsedEl = document.getElementById('dc-rpc-elapsed');
 
   let activeRpcStartMs = null;
+
+  // 3D-наклон и радиальная подсветка за курсором на карточке Discord
+  if (discordCard) {
+    discordCard.addEventListener('mousemove', (e) => {
+      const rect = discordCard.getBoundingClientRect();
+      const px = e.clientX - rect.left;
+      const py = e.clientY - rect.top;
+      const relX = px / rect.width - 0.5;
+      const relY = py / rect.height - 0.5;
+
+      discordCard.classList.add('is-tilting');
+      discordCard.style.setProperty('--mx', `${px.toFixed(1)}px`);
+      discordCard.style.setProperty('--my', `${py.toFixed(1)}px`);
+      discordCard.style.setProperty('--dc-rx', `${(-relY * 9).toFixed(2)}deg`);
+      discordCard.style.setProperty('--dc-ry', `${(relX * 9).toFixed(2)}deg`);
+      discordCard.style.setProperty('--dc-ty', '-2px');
+    });
+
+    discordCard.addEventListener('mouseleave', () => {
+      discordCard.classList.remove('is-tilting');
+      discordCard.style.setProperty('--dc-rx', '0deg');
+      discordCard.style.setProperty('--dc-ry', '0deg');
+      discordCard.style.setProperty('--dc-ty', '0px');
+    });
+  }
 
   function resolveRpcAssetUrl(activity, discordUserId) {
     const assets = activity?.assets;
@@ -73,26 +104,54 @@ document.addEventListener('DOMContentLoaded', () => {
     const user = data.discord_user;
     if (user) {
       dcUsernameEl.textContent = user.global_name || user.username || 'sekailauren';
+      dcHandleEl.textContent = user.username ? `@${user.username}` : '';
+
       if (user.avatar) {
-        dcAvatarEl.src = `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=128`;
+        const isAnimatedAvatar = user.avatar.startsWith('a_');
+        const ext = isAnimatedAvatar ? 'gif' : 'png';
+        dcAvatarEl.src = `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.${ext}?size=128`;
+      }
+
+      // Рамка аватара из Discord (avatar_decoration_data)
+      const decoAsset = user.avatar_decoration_data?.asset;
+      if (decoAsset) {
+        dcDecorationEl.src = `https://cdn.discordapp.com/avatar-decoration-presets/${decoAsset}.png?size=160&passthrough=true`;
+        dcDecorationEl.classList.remove('hidden-icon');
+      } else {
+        dcDecorationEl.classList.add('hidden-icon');
       }
     }
 
     const status = data.discord_status || 'offline';
     dcStatusDotEl.className = `dc-status-dot ${status}`;
+    dcStatusTextEl.className = `discord-status-badge ${status}`;
     dcStatusTextEl.textContent = status;
 
     const activities = Array.isArray(data.activities) ? data.activities : [];
     const customAct = activities.find((a) => a.type === 4);
     const rpcAct = activities.find((a) => a.type !== 4);
 
-    if (customAct && (customAct.state || customAct.emoji?.name)) {
-      const emojiPrefix = customAct.emoji?.name && !customAct.emoji?.id ? `${customAct.emoji.name} ` : '';
-      dcCustomStatusEl.textContent = `${emojiPrefix}${customAct.state || ''}`.trim();
+    // Кастомный статус для выезжающей панели при наведении
+    const hasCustomText = Boolean(customAct && (customAct.state || customAct.emoji?.name));
+    if (hasCustomText) {
+      const emojiStr = customAct.emoji?.name && !customAct.emoji?.id ? customAct.emoji.name : '';
+      dcCustomEmojiEl.textContent = emojiStr;
+      dcCustomTextEl.textContent = customAct.state || '';
+      dcCustomBoxEl.classList.remove('hidden-icon');
     } else {
-      dcCustomStatusEl.textContent = rpcAct ? `Активен: ${rpcAct.name}` : 'Наведи, чтобы посмотреть RPC';
+      dcCustomBoxEl.classList.add('hidden-icon');
     }
 
+    // Краткая строка в свернутом виде
+    if (rpcAct) {
+      dcSummaryLineEl.textContent = `Играет / активен: ${rpcAct.name}`;
+    } else if (hasCustomText) {
+      dcSummaryLineEl.textContent = 'Есть кастомный статус — наведи';
+    } else {
+      dcSummaryLineEl.textContent = 'Наведи, чтобы посмотреть RPC';
+    }
+
+    // RPC блок
     if (rpcAct) {
       dcRpcNameEl.textContent = rpcAct.name || 'Активность';
       dcRpcDetailsEl.textContent = rpcAct.details || '';
@@ -163,35 +222,63 @@ document.addEventListener('DOMContentLoaded', () => {
 
   initLanyard();
 
-  // 0. Счетчик просмотров био с глазиком в правом верхнем углу
+  // 0. Уникальный счетчик просмотров с защитой от накрутки с одного IP / устройства
   const viewsCountEl = document.getElementById('views-count');
-  const COUNTER_NAMESPACE = 'sekailauren_bio_2026';
+  const COUNTER_NAMESPACE = 'sekailauren_bio_unique_2026';
   const COUNTER_KEY = 'visits';
-  const LOCAL_FALLBACK_KEY = 'sekailauren_local_views_v1';
+  const DEVICE_FLAG_KEY = 'sekailauren_device_counted_v1';
+  const SEEN_IPS_KEY = 'sekailauren_seen_ips_v1';
 
-  function updateViewsCounter() {
-    let localCount = parseInt(localStorage.getItem(LOCAL_FALLBACK_KEY) || '0', 10);
-    if (!Number.isFinite(localCount) || localCount < 0) localCount = 0;
-    localCount += 1;
-    localStorage.setItem(LOCAL_FALLBACK_KEY, String(localCount));
-    viewsCountEl.textContent = String(localCount);
+  async function updateUniqueViewsCounter() {
+    let visitorIp = '';
+    try {
+      const ipRes = await fetch('https://api.ipify.org?format=json', { cache: 'no-store' });
+      if (ipRes.ok) {
+        const ipData = await ipRes.json();
+        visitorIp = typeof ipData?.ip === 'string' ? ipData.ip.trim() : '';
+      }
+    } catch (_) {}
 
-    fetch(`https://api.counterapi.dev/v1/${COUNTER_NAMESPACE}/${COUNTER_KEY}/up`, {
-      cache: 'no-store'
-    })
-      .then((res) => (res.ok ? res.json() : Promise.reject()))
-      .then((data) => {
-        const remoteVal = typeof data?.count === 'number'
-          ? data.count
-          : (typeof data?.value === 'number' ? data.value : null);
-        if (typeof remoteVal === 'number' && remoteVal > 0) {
-          viewsCountEl.textContent = String(remoteVal);
+    let seenIps = [];
+    try {
+      seenIps = JSON.parse(localStorage.getItem(SEEN_IPS_KEY) || '[]');
+      if (!Array.isArray(seenIps)) seenIps = [];
+    } catch (_) {
+      seenIps = [];
+    }
+
+    const alreadyCountedDevice = localStorage.getItem(DEVICE_FLAG_KEY) === '1';
+    const alreadyCountedIp = Boolean(visitorIp && seenIps.includes(visitorIp));
+    const shouldIncrement = !alreadyCountedDevice && !alreadyCountedIp;
+
+    const endpointAction = shouldIncrement ? 'up' : 'get';
+
+    try {
+      const res = await fetch(`https://api.counterapi.dev/v1/${COUNTER_NAMESPACE}/${COUNTER_KEY}/${endpointAction}`, {
+        cache: 'no-store'
+      });
+      if (!res.ok) throw new Error('counter failed');
+      const data = await res.json();
+      const val = typeof data?.count === 'number'
+        ? data.count
+        : (typeof data?.value === 'number' ? data.value : 1);
+
+      viewsCountEl.textContent = String(Math.max(1, val));
+
+      if (shouldIncrement) {
+        localStorage.setItem(DEVICE_FLAG_KEY, '1');
+        if (visitorIp && !seenIps.includes(visitorIp)) {
+          seenIps.push(visitorIp);
+          localStorage.setItem(SEEN_IPS_KEY, JSON.stringify(seenIps.slice(-20)));
         }
-      })
-      .catch(() => {});
+      }
+    } catch (_) {
+      viewsCountEl.textContent = '1';
+      localStorage.setItem(DEVICE_FLAG_KEY, '1');
+    }
   }
 
-  updateViewsCounter();
+  updateUniqueViewsCounter();
 
   // 1. Логика входа по клику на >my bio<
   const entryScreen = document.getElementById('entry-screen');
@@ -800,7 +887,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   requestAnimationFrame(renderSlidersAndParticles);
 
-  // 8. Анимация снежинок на фоне и за курсором
+  // 8. Анимация снежинок на фоне (увеличено количество) и за курсором
   const canvas = document.getElementById('snow-canvas');
   const ctx = canvas.getContext('2d');
 
@@ -814,16 +901,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const ambientSnow = [];
   const cursorSnow = [];
-  const AMBIENT_COUNT = 55;
+  const AMBIENT_COUNT = 95;
 
   for (let i = 0; i < AMBIENT_COUNT; i++) {
     ambientSnow.push({
       x: Math.random() * width,
       y: Math.random() * height,
-      radius: Math.random() * 2.2 + 0.8,
-      speedY: Math.random() * 0.8 + 0.3,
-      speedX: (Math.random() - 0.5) * 0.4,
-      opacity: Math.random() * 0.45 + 0.15
+      radius: Math.random() * 2.4 + 0.8,
+      speedY: Math.random() * 0.9 + 0.35,
+      speedX: (Math.random() - 0.5) * 0.45,
+      swayPhase: Math.random() * Math.PI * 2,
+      swaySpeed: Math.random() * 0.02 + 0.008,
+      opacity: Math.random() * 0.5 + 0.16
     });
   }
 
@@ -865,8 +954,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     for (let i = 0; i < ambientSnow.length; i++) {
       const f = ambientSnow[i];
+      f.swayPhase += f.swaySpeed;
       f.y += f.speedY;
-      f.x += f.speedX;
+      f.x += f.speedX + Math.sin(f.swayPhase) * 0.25;
 
       if (f.y > height) {
         f.y = -5;

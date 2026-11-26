@@ -352,7 +352,7 @@ body {
 }
 
 .hidden-icon {
-  display: none;
+  display: none !important;
 }
 
 .volume-control {
@@ -362,7 +362,6 @@ body {
   align-items: center;
 }
 
-/* Выезд вниз под кнопку звука */
 .volume-drawer {
   position: absolute;
   top: calc(100% + 6px);
@@ -492,65 +491,138 @@ body {
   transform: perspective(900px) rotateX(0deg) translateY(0) scale(1);
 }
 
-/* Компактный Discord-виджет с плавным раскрытием RPC при наведении */
+/* Discord-виджет с рамкой аватара, 3D-подсветкой за курсором и плавным раскрытием статуса + RPC */
 .discord-card {
-  margin-bottom: 14px;
-  padding: 10px 13px;
-  border-radius: 13px;
+  --dc-rx: 0deg;
+  --dc-ry: 0deg;
+  --dc-ty: 0px;
+  --mx: 50%;
+  --my: 50%;
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 15px;
+  padding: 12px 14px;
+  border-radius: 15px;
   text-align: left;
-  background: rgba(16, 16, 20, 0.56);
-  border: 1px solid rgba(255, 255, 255, 0.11);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+  background: linear-gradient(145deg, rgba(19, 19, 25, 0.72) 0%, rgba(12, 12, 16, 0.68) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.58), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  transform-style: preserve-3d;
+  will-change: transform;
   transition:
+    transform 0.18s ease-out,
     background-color 0.28s ease,
     border-color 0.28s ease,
-    box-shadow 0.28s ease,
-    transform 0.25s ease;
+    box-shadow 0.28s ease;
+}
+
+.container.revealed .discord-card {
+  transform: perspective(750px) rotateX(var(--dc-rx)) rotateY(var(--dc-ry)) translateY(var(--dc-ty));
+}
+
+.container.revealed .discord-card.is-tilting {
+  transition:
+    transform 0.06s linear,
+    background-color 0.28s ease,
+    border-color 0.28s ease,
+    box-shadow 0.28s ease;
 }
 
 .discord-card:hover {
-  background: rgba(22, 22, 28, 0.76);
-  border-color: rgba(129, 140, 248, 0.36);
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.72);
+  border-color: rgba(129, 140, 248, 0.48);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.8), 0 0 22px rgba(129, 140, 248, 0.16);
+}
+
+/* Радиальное свечение, следующее за курсором по карточке Discord */
+.discord-glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(
+    220px circle at var(--mx) var(--my),
+    rgba(129, 140, 248, 0.22),
+    rgba(56, 189, 248, 0.08) 45%,
+    transparent 75%
+  );
+  transition: opacity 0.28s ease;
+  z-index: 0;
+}
+
+.discord-card:hover .discord-glow {
+  opacity: 1;
+}
+
+.discord-compact,
+.discord-rpc-drawer {
+  position: relative;
+  z-index: 1;
 }
 
 .discord-compact {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 
 .discord-avatar-box {
   position: relative;
-  width: 34px;
-  height: 34px;
+  width: 42px;
+  height: 42px;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .discord-avatar {
-  width: 34px;
-  height: 34px;
+  width: 38px;
+  height: 38px;
   border-radius: 50%;
   object-fit: cover;
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  border: 1.5px solid rgba(255, 255, 255, 0.18);
+  transition: transform 0.3s ease;
+}
+
+.discord-card:hover .discord-avatar {
+  transform: scale(1.04);
+}
+
+/* Настоящая рамка аватара из Discord (avatar_decoration_data) */
+.discord-avatar-decoration {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 48px;
+  height: 48px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  object-fit: contain;
+  z-index: 2;
+  transition: transform 0.3s ease;
+}
+
+.discord-card:hover .discord-avatar-decoration {
+  transform: translate(-50%, -50%) scale(1.05);
 }
 
 .dc-status-dot {
   position: absolute;
-  right: -1px;
-  bottom: -1px;
-  width: 10px;
-  height: 10px;
+  right: 0px;
+  bottom: 0px;
+  width: 11px;
+  height: 11px;
   border-radius: 50%;
   border: 2px solid #0e0e12;
   background: #6b7280;
+  z-index: 3;
 }
 
-.dc-status-dot.online { background: #22c55e; box-shadow: 0 0 8px rgba(34, 197, 94, 0.7); }
-.dc-status-dot.idle { background: #eab308; }
-.dc-status-dot.dnd { background: #ef4444; }
+.dc-status-dot.online { background: #22c55e; box-shadow: 0 0 8px rgba(34, 197, 94, 0.8); }
+.dc-status-dot.idle { background: #eab308; box-shadow: 0 0 8px rgba(234, 179, 8, 0.65); }
+.dc-status-dot.dnd { background: #ef4444; box-shadow: 0 0 8px rgba(239, 68, 68, 0.75); }
 .dc-status-dot.offline { background: #6b7280; }
 
 .discord-user-meta {
@@ -561,84 +633,159 @@ body {
 .discord-name-row {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
 .discord-username {
-  font-size: 13px;
+  font-size: 13.5px;
   font-weight: 700;
-  color: #f9fafb;
+  color: #ffffff;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.discord-status-label {
-  font-size: 10.5px;
+.discord-handle {
+  font-size: 11px;
+  color: #71717a;
+}
+
+.discord-status-badge {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  padding: 1.5px 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
   color: #9ca3af;
 }
 
-.discord-custom-status {
+.discord-status-badge.online { color: #4ade80; background: rgba(34, 197, 94, 0.14); }
+.discord-status-badge.idle { color: #facc15; background: rgba(234, 179, 8, 0.14); }
+.discord-status-badge.dnd { color: #f87171; background: rgba(239, 68, 68, 0.14); }
+
+.discord-summary-line {
   font-size: 11.5px;
   color: #a1a1aa;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  margin-top: 1px;
+  margin-top: 2px;
 }
 
 .discord-expand-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.4px;
   color: #9ca3af;
-  padding: 3px 7px;
-  border-radius: 7px;
+  padding: 4px 8px;
+  border-radius: 8px;
   background: rgba(255, 255, 255, 0.06);
-  transition: transform 0.28s ease, color 0.25s ease, background-color 0.25s ease;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  transition: color 0.25s ease, background-color 0.25s ease, border-color 0.25s ease;
+}
+
+.hint-arrow {
+  display: inline-block;
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .discord-card:hover .discord-expand-hint {
-  color: #e5e7eb;
-  background: rgba(255, 255, 255, 0.12);
-  transform: translateY(-1px);
+  color: #ffffff;
+  background: rgba(129, 140, 248, 0.2);
+  border-color: rgba(129, 140, 248, 0.4);
 }
 
-/* Выпадающий блок RPC при наведении */
+.discord-card:hover .hint-arrow {
+  transform: rotate(180deg);
+}
+
+/* Выпадающий блок кастомного статуса и RPC при наведении */
 .discord-rpc-drawer {
   max-height: 0px;
   opacity: 0;
   overflow: hidden;
-  transform: translateY(-4px);
+  transform: translateY(-6px);
   transition:
-    max-height 0.4s cubic-bezier(0.22, 1, 0.36, 1),
-    opacity 0.3s ease,
-    transform 0.4s cubic-bezier(0.22, 1, 0.36, 1),
-    margin-top 0.35s ease;
+    max-height 0.44s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.32s ease,
+    transform 0.44s cubic-bezier(0.22, 1, 0.36, 1),
+    margin-top 0.38s ease;
 }
 
 .discord-card:hover .discord-rpc-drawer {
-  max-height: 110px;
+  max-height: 175px;
   opacity: 1;
   transform: translateY(0);
-  margin-top: 10px;
+  margin-top: 11px;
+}
+
+/* Анимированный блок кастомного статуса */
+.dc-custom-box {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 10px;
+  margin-bottom: 9px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 11.5px;
+  color: #e4e4e7;
+  opacity: 0;
+  transform: translateY(-6px) scale(0.97);
+  transition:
+    opacity 0.38s cubic-bezier(0.22, 1, 0.36, 1) 0.06s,
+    transform 0.38s cubic-bezier(0.22, 1, 0.36, 1) 0.06s;
+}
+
+.discord-card:hover .dc-custom-box {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.dc-custom-emoji {
+  font-size: 13px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.dc-custom-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .discord-rpc-inner {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding-top: 10px;
+  padding-top: 9px;
   border-top: 1px solid rgba(255, 255, 255, 0.09);
+  opacity: 0;
+  transform: translateY(-6px);
+  transition:
+    opacity 0.4s cubic-bezier(0.22, 1, 0.36, 1) 0.1s,
+    transform 0.4s cubic-bezier(0.22, 1, 0.36, 1) 0.1s;
+}
+
+.discord-card:hover .discord-rpc-inner {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .dc-rpc-img {
-  width: 42px;
-  height: 42px;
-  border-radius: 9px;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
   object-fit: cover;
   flex-shrink: 0;
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.16);
 }
 
 .dc-rpc-text {
@@ -647,7 +794,7 @@ body {
 }
 
 .dc-rpc-name {
-  font-size: 12px;
+  font-size: 12.5px;
   font-weight: 700;
   color: #ffffff;
   white-space: nowrap;
@@ -667,6 +814,7 @@ body {
   font-size: 10.5px;
   font-variant-numeric: tabular-nums;
   color: #818cf8;
+  font-weight: 600;
   flex-shrink: 0;
 }
 
@@ -750,7 +898,6 @@ h1 {
     border-color 0.25s ease;
 }
 
-/* Световой блик при наведении на кнопку */
 .link-btn::before {
   content: "";
   position: absolute;
@@ -776,7 +923,6 @@ h1 {
   --ty: 0px;
 }
 
-/* Полупрозрачная синяя кнопка Telegram */
 .tg-btn {
   background: linear-gradient(135deg, rgba(34, 158, 217, 0.68) 0%, rgba(22, 119, 168, 0.68) 100%);
   color: #ffffff;
@@ -790,7 +936,6 @@ h1 {
   box-shadow: 0 10px 28px rgba(34, 158, 217, 0.42);
 }
 
-/* Полупрозрачные темно-серые остальные кнопки */
 .gray-btn {
   background: rgba(20, 20, 24, 0.58);
   color: #e5e7eb;
