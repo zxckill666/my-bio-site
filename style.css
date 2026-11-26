@@ -56,24 +56,15 @@ body {
   transition: filter 0.35s ease, background-color 0.35s ease;
 }
 
-/* Свечение за курсором на ПК */
-.cursor-glow {
+.sc-hidden-iframe {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 240px;
-  height: 240px;
-  border-radius: 50%;
+  width: 1px;
+  height: 1px;
+  opacity: 0.001;
   pointer-events: none;
-  z-index: 2;
-  opacity: 0;
-  transform: translate3d(-999px, -999px, 0);
-  background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
-  transition: opacity 0.3s ease;
-}
-
-body.is-desktop:hover .cursor-glow {
-  opacity: 0.75;
+  left: -9999px;
+  top: -9999px;
+  border: 0;
 }
 
 /* Мини-тост копирования */
@@ -197,6 +188,7 @@ body.hacker-mode .footer {
   height: 100%;
   pointer-events: none;
   z-index: 1;
+  will-change: transform;
 }
 
 .blizzard-badge {
@@ -339,11 +331,11 @@ body.hacker-mode .footer {
 .top-player {
   pointer-events: auto;
   width: 100%;
-  max-width: 430px;
+  max-width: 470px;
   display: flex;
   align-items: center;
-  gap: 11px;
-  padding: 8px 12px;
+  gap: 10px;
+  padding: 8px 11px;
   border-radius: 15px;
   background: rgba(12, 12, 15, 0.56);
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -478,13 +470,13 @@ body.hacker-mode .footer {
 .top-player-actions {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
   flex-shrink: 0;
 }
 
 .player-action-btn {
-  width: 29px;
-  height: 29px;
+  width: 28px;
+  height: 28px;
   border-radius: 9px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   background: rgba(255, 255, 255, 0.06);
@@ -503,8 +495,8 @@ body.hacker-mode .footer {
 }
 
 .player-action-btn svg {
-  width: 14px;
-  height: 14px;
+  width: 13px;
+  height: 13px;
 }
 
 .hidden-icon {
@@ -1341,7 +1333,6 @@ h1 {
   will-change: transform;
 }
 
-/* Вращающийся винил-блик поверх дорожек */
 .vinyl-sheen {
   position: absolute;
   inset: 0;

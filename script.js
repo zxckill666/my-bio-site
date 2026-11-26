@@ -59,13 +59,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Свечение за курсором на ПК
-  const cursorGlow = document.getElementById('cursor-glow');
-  window.addEventListener('mousemove', (e) => {
-    if (!cursorGlow || document.body.classList.contains('is-mobile')) return;
-    cursorGlow.style.transform = `translate3d(${(e.clientX - 120).toFixed(1)}px, ${(e.clientY - 120).toFixed(1)}px, 0)`;
-  }, { passive: true });
-
   function detectDeviceEnvironment() {
     const ua = navigator.userAgent || '';
     const isMobileUa = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
@@ -99,8 +92,14 @@ document.addEventListener('DOMContentLoaded', () => {
     isMobileDevice = detectDeviceEnvironment();
   });
 
+  // Плеер + SoundCloud плейлист (с fallback на track.mp3)
   const audio = document.getElementById('audio-element');
+  const scIframe = document.getElementById('sc-widget-iframe');
+  const playerCoverImg = document.getElementById('player-cover-img');
+  const playerTrackTitle = document.getElementById('player-track-title');
   const topPlayer = document.getElementById('top-player');
+  const prevTrackBtn = document.getElementById('prev-track-btn');
+  const nextTrackBtn = document.getElementById('next-track-btn');
   const playPauseBtn = document.getElementById('play-pause-btn');
   const muteBtn = document.getElementById('mute-btn');
   const volumeControl = document.getElementById('volume-control');
@@ -123,6 +122,157 @@ document.addEventListener('DOMContentLoaded', () => {
   let targetProgressPercent = 0;
   let smoothProgressPercent = 0;
   audio.volume = lastNonZeroVolume;
+
+  let scWidget = null;
+  let scReady = false;
+  let scPlaying = false;
+  let scDurationMs = 0;
+  let scPositionMs = 0;
+  let useLocalFallback = false;
+
+  function formatTime(sec) {
+    if (!Number.isFinite(sec) || sec < 0) return '00:00';
+    return `${String(Math.floor(sec / 60)).padStart(2, '0')}:${String(Math.floor(sec % 60)).padStart(2, '0')}`;
+  }
+
+  function isAnyPlaying() {
+    return useLocalFallback ? !audio.paused : scPlaying;
+  }
+
+  function syncPlayState() {
+    const playing = isAnyPlaying();
+    iconPlay.classList.toggle('hidden-icon', playing);
+    iconPause.classList.toggle('hidden-icon', !playing);
+  }
+
+  function syncMuteState() {
+    const isMutedNow = useLocalFallback
+      ? (audio.muted || audio.volume <= 0.025)
+      : (parseFloat(volumeSlider.value) <= 0.025);
+    iconSoundOn.classList.toggle('hidden-icon', isMutedNow);
+    iconSoundOff.classList.toggle('hidden-icon', !isMutedNow);
+  }
+
+  function syncScTrackMeta() {
+    if (!scWidget || !scReady) return;
+    scWidget.getCurrentSound((sound) => {
+      if (!sound) return;
+      if (sound.title && playerTrackTitle) playerTrackTitle.textContent = sound.title;
+      const art = sound.artwork_url || sound.user?.avatar_url;
+      if (art && playerCoverImg) {
+        playerCoverImg.src = art.replace('-large.jpg', '-t200x200.jpg');
+      }
+      if (typeof sound.duration === 'number' && sound.duration > 0) {
+        scDurationMs = sound.duration;
+        durationTimeEl.textContent = formatTime(scDurationMs / 1000);
+      }
+    });
+  }
+
+  function initSoundCloudPlaylist() {
+    if (!window.SC || !window.SC.Widget || !scIframe) {
+      useLocalFallback = true;
+      return;
+    }
+    try {
+      scWidget = window.SC.Widget(scIframe);
+      scWidget.bind(window.SC.Widget.Events.READY, () => {
+        scReady = true;
+        scWidget.setVolume(lastNonZeroVolume * 100);
+        syncScTrackMeta();
+      });
+      scWidget.bind(window.SC.Widget.Events.PLAY, () => {
+        scPlaying = true;
+        syncScTrackMeta();
+        syncPlayState();
+      });
+      scWidget.bind(window.SC.Widget.Events.PAUSE, () => {
+        scPlaying = false;
+        syncPlayState();
+      });
+      scWidget.bind(window.SC.Widget.Events.FINISH, () => {
+        scPlaying = false;
+        syncPlayState();
+      });
+      scWidget.bind(window.SC.Widget.Events.PLAY_PROGRESS, (data) => {
+        if (isScrubbing) return;
+        scPositionMs = data?.currentPosition || 0;
+        if (scDurationMs > 0) {
+          currentTimeEl.textContent = formatTime(scPositionMs / 1000);
+          durationTimeEl.textContent = formatTime(scDurationMs / 1000);
+          targetProgressPercent = Math.max(0, Math.min(100, (scPositionMs / scDurationMs) * 100));
+          seekSlider.value = targetProgressPercent;
+        }
+      });
+      scWidget.bind(window.SC.Widget.Events.ERROR, () => {
+        if (!scPlaying) useLocalFallback = true;
+      });
+    } catch (_) {
+      useLocalFallback = true;
+    }
+  }
+  initSoundCloudPlaylist();
+
+  function startPlayback() {
+    if (!useLocalFallback && scWidget && scReady) {
+      scWidget.play();
+      scPlaying = true;
+      syncPlayState();
+      return;
+    }
+    initAudioAnalyser();
+    audio.play().catch(() => {});
+  }
+
+  function pausePlayback() {
+    if (!useLocalFallback && scWidget && scReady) {
+      scWidget.pause();
+      scPlaying = false;
+      syncPlayState();
+      return;
+    }
+    audio.pause();
+  }
+
+  function applyVolumeValue(val) {
+    const clamped = Math.max(0, Math.min(1, val));
+    targetVolumePercent = clamped * 100;
+    volumeSlider.value = clamped;
+    if (clamped <= 0.025) {
+      audio.volume = 0;
+      audio.muted = true;
+      if (scWidget && scReady) scWidget.setVolume(0);
+    } else {
+      audio.muted = false;
+      audio.volume = clamped;
+      lastNonZeroVolume = clamped;
+      if (scWidget && scReady) scWidget.setVolume(clamped * 100);
+    }
+    syncMuteState();
+    spawnVolumeBurst(3);
+  }
+
+  if (prevTrackBtn) {
+    prevTrackBtn.addEventListener('click', () => {
+      if (!useLocalFallback && scWidget && scReady) {
+        scWidget.prev();
+        setTimeout(syncScTrackMeta, 250);
+      } else {
+        audio.currentTime = 0;
+      }
+    });
+  }
+
+  if (nextTrackBtn) {
+    nextTrackBtn.addEventListener('click', () => {
+      if (!useLocalFallback && scWidget && scReady) {
+        scWidget.next();
+        setTimeout(syncScTrackMeta, 250);
+      } else {
+        audio.currentTime = 0;
+      }
+    });
+  }
 
   // Discord Lanyard
   const DISCORD_USER_ID = '1378047204119547989';
@@ -416,8 +566,7 @@ document.addEventListener('DOMContentLoaded', () => {
     mainContent.classList.remove('hidden');
     tabNavRail.classList.remove('hidden');
     requestAnimationFrame(() => mainContent.classList.add('revealed'));
-    initAudioAnalyser();
-    audio.play().catch(() => {});
+    startPlayback();
   });
 
   // Пасхалка на © 2026 или набор "hack"
@@ -574,7 +723,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function resizeDinoCanvas() {
     if (!dinoCanvas) return;
     const rect = dinoStage.getBoundingClientRect();
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
     dinoW = Math.max(260, Math.floor(rect.width || 380));
     dinoH = Math.max(150, Math.floor(rect.height || 175));
     dinoCanvas.width = Math.floor(dinoW * dpr);
@@ -1091,11 +1240,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const w = cavaCanvas.width;
     const h = cavaCanvas.height;
     cavaCtx.clearRect(0, 0, w, h);
-    const isPlaying = !audio.paused && !audio.muted && audio.volume > 0.01;
+    const playingNow = isAnyPlaying() && !syncMuteIsMuted();
     let hasRealAudio = false;
     let bassRaw = 0;
 
-    if (analyser && freqData && isPlaying) {
+    if (useLocalFallback && analyser && freqData && playingNow) {
       analyser.getByteFrequencyData(freqData);
       for (let i = 0; i < freqData.length; i++) {
         if (freqData[i] > 6) { hasRealAudio = true; break; }
@@ -1105,7 +1254,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    if (isPlaying && !hasRealAudio) {
+    if (playingNow && !hasRealAudio) {
       bassRaw = 0.35 + 0.35 * Math.sin(timeMs * 0.008);
     }
     smoothBass += (bassRaw - smoothBass) * 0.16;
@@ -1120,7 +1269,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const barWidth = Math.max(2, (w - gap * (CAVA_BARS - 1)) / CAVA_BARS);
     for (let i = 0; i < CAVA_BARS; i++) {
       let targetLevel = 0.14;
-      if (isPlaying) {
+      if (playingNow) {
         if (hasRealAudio && freqData) {
           const binIndex = Math.min(freqData.length - 1, Math.floor((i / CAVA_BARS) * 18) + 1);
           targetLevel = Math.max(0.16, Math.min(1, (freqData[binIndex] / 255) * 1.25));
@@ -1130,7 +1279,7 @@ document.addEventListener('DOMContentLoaded', () => {
           targetLevel = Math.max(0.18, Math.min(0.96, wave1 * 0.62 + wave2 * 0.34));
         }
       }
-      cavaLevels[i] += (targetLevel - cavaLevels[i]) * (isPlaying ? 0.26 : 0.14);
+      cavaLevels[i] += (targetLevel - cavaLevels[i]) * (playingNow ? 0.26 : 0.14);
       const barHeight = Math.max(3, cavaLevels[i] * (h - 2));
       const x = i * (barWidth + gap);
       const y = h - barHeight;
@@ -1145,37 +1294,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Управление аудио и ползунками
-  function formatTime(sec) {
-    if (!Number.isFinite(sec) || sec < 0) return '00:00';
-    return `${String(Math.floor(sec / 60)).padStart(2, '0')}:${String(Math.floor(sec % 60)).padStart(2, '0')}`;
-  }
-
-  function syncPlayState() {
-    iconPlay.classList.toggle('hidden-icon', !audio.paused);
-    iconPause.classList.toggle('hidden-icon', audio.paused);
-  }
-
-  function syncMuteState() {
-    const isMutedNow = audio.muted || audio.volume <= 0.025;
-    iconSoundOn.classList.toggle('hidden-icon', isMutedNow);
-    iconSoundOff.classList.toggle('hidden-icon', !isMutedNow);
-  }
-
-  function applyVolumeValue(val) {
-    const clamped = Math.max(0, Math.min(1, val));
-    targetVolumePercent = clamped * 100;
-    volumeSlider.value = clamped;
-    if (clamped <= 0.025) {
-      audio.volume = 0;
-      audio.muted = true;
-    } else {
-      audio.muted = false;
-      audio.volume = clamped;
-      lastNonZeroVolume = clamped;
-    }
-    syncMuteState();
-    spawnVolumeBurst(3);
+  function syncMuteIsMuted() {
+    return useLocalFallback ? (audio.muted || audio.volume <= 0.025) : (parseFloat(volumeSlider.value) <= 0.025);
   }
 
   let volumeCloseTimer = null;
@@ -1193,15 +1313,14 @@ document.addEventListener('DOMContentLoaded', () => {
   volumeControl.addEventListener('mouseleave', scheduleCloseVolumeDrawer);
 
   playPauseBtn.addEventListener('click', () => {
-    initAudioAnalyser();
-    if (audio.paused) audio.play().catch(() => {});
-    else audio.pause();
+    if (isAnyPlaying()) pausePlayback();
+    else startPlayback();
   });
 
   muteBtn.addEventListener('click', () => {
     if (!isMobileDevice) openVolumeDrawer();
-    if (audio.muted || audio.volume <= 0.025) applyVolumeValue(lastNonZeroVolume > 0.05 ? lastNonZeroVolume : 0.75);
-    else { lastNonZeroVolume = audio.volume; applyVolumeValue(0); }
+    if (syncMuteIsMuted()) applyVolumeValue(lastNonZeroVolume > 0.05 ? lastNonZeroVolume : 0.75);
+    else { lastNonZeroVolume = parseFloat(volumeSlider.value) || 0.75; applyVolumeValue(0); }
   });
 
   volumeSlider.addEventListener('input', () => { openVolumeDrawer(); applyVolumeValue(parseFloat(volumeSlider.value)); });
@@ -1229,7 +1348,9 @@ document.addEventListener('DOMContentLoaded', () => {
   audio.addEventListener('play', syncPlayState);
   audio.addEventListener('pause', syncPlayState);
   audio.addEventListener('ended', () => { audio.currentTime = 0; targetProgressPercent = 0; syncPlayState(); });
-  audio.addEventListener('loadedmetadata', () => { durationTimeEl.textContent = formatTime(audio.duration); });
+  audio.addEventListener('loadedmetadata', () => {
+    if (useLocalFallback) durationTimeEl.textContent = formatTime(audio.duration);
+  });
 
   let isScrubbing = false;
   function setSeekFromClientX(clientX, immediateVisual = false) {
@@ -1242,14 +1363,18 @@ document.addEventListener('DOMContentLoaded', () => {
       progressFill.style.width = `${pct.toFixed(3)}%`;
     }
     seekSlider.value = pct;
-    if (Number.isFinite(audio.duration) && audio.duration > 0) {
+    if (!useLocalFallback && scWidget && scReady && scDurationMs > 0) {
+      const targetMs = (pct / 100) * scDurationMs;
+      scWidget.seekTo(targetMs);
+      currentTimeEl.textContent = formatTime(targetMs / 1000);
+    } else if (Number.isFinite(audio.duration) && audio.duration > 0) {
       audio.currentTime = (pct / 100) * audio.duration;
       currentTimeEl.textContent = formatTime(audio.currentTime);
     }
   }
 
   audio.addEventListener('timeupdate', () => {
-    if (isScrubbing) return;
+    if (!useLocalFallback || isScrubbing) return;
     currentTimeEl.textContent = formatTime(audio.currentTime);
     if (Number.isFinite(audio.duration) && audio.duration > 0) {
       durationTimeEl.textContent = formatTime(audio.duration);
@@ -1263,7 +1388,11 @@ document.addEventListener('DOMContentLoaded', () => {
     targetProgressPercent = pct;
     smoothProgressPercent = pct;
     progressFill.style.width = `${pct.toFixed(3)}%`;
-    if (Number.isFinite(audio.duration) && audio.duration > 0) {
+    if (!useLocalFallback && scWidget && scReady && scDurationMs > 0) {
+      const targetMs = (pct / 100) * scDurationMs;
+      scWidget.seekTo(targetMs);
+      currentTimeEl.textContent = formatTime(targetMs / 1000);
+    } else if (Number.isFinite(audio.duration) && audio.duration > 0) {
       audio.currentTime = (pct / 100) * audio.duration;
       currentTimeEl.textContent = formatTime(audio.currentTime);
     }
@@ -1316,14 +1445,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function resizeBarCanvas() {
     const rect = pCanvas.getBoundingClientRect();
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
     pCanvas.width = Math.max(1, Math.floor(rect.width * dpr));
     pCanvas.height = Math.max(1, Math.floor(rect.height * dpr));
     pCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
   function resizeVolCanvas() {
     const rect = vCanvas.getBoundingClientRect();
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
     vCanvas.width = Math.max(1, Math.floor(rect.width * dpr));
     vCanvas.height = Math.max(1, Math.floor(rect.height * dpr));
     vCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -1397,7 +1526,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const pRect = pCanvas.getBoundingClientRect();
     pCtx.clearRect(0, 0, pRect.width, pRect.height);
     if (isScrubbing) spawnProgressParticles(3, true);
-    else if (!audio.paused && Math.random() < 0.75) spawnProgressParticles(1, false);
+    else if (isAnyPlaying() && Math.random() < 0.75) spawnProgressParticles(1, false);
 
     for (let i = barParticles.length - 1; i >= 0; i--) {
       const pt = barParticles[i];
@@ -1438,23 +1567,32 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   requestAnimationFrame(renderSlidersAndParticles);
 
-  // Снег + порыв при переключении вкладок + метель
+  // Оптимизированный снег + метель + снежинки за курсором
   const canvas = document.getElementById('snow-canvas');
-  const ctx = canvas.getContext('2d');
-  let width = (canvas.width = window.innerWidth);
-  let height = (canvas.height = window.innerHeight);
-  window.addEventListener('resize', () => {
-    width = canvas.width = window.innerWidth;
-    height = canvas.height = window.innerHeight;
-  });
+  const ctx = canvas.getContext('2d', { alpha: true });
+  let viewWidth = window.innerWidth;
+  let viewHeight = window.innerHeight;
+  let snowDpr = Math.min(window.devicePixelRatio || 1, 1.5);
+
+  function resizeSnowCanvas() {
+    viewWidth = window.innerWidth;
+    viewHeight = window.innerHeight;
+    snowDpr = Math.min(window.devicePixelRatio || 1, isMobileDevice ? 1.25 : 1.5);
+    canvas.width = Math.floor(viewWidth * snowDpr);
+    canvas.height = Math.floor(viewHeight * snowDpr);
+    ctx.setTransform(snowDpr, 0, 0, snowDpr, 0, 0);
+  }
+  resizeSnowCanvas();
+  window.addEventListener('resize', resizeSnowCanvas);
 
   const ambientSnow = [];
   const blizzardSnow = [];
   const cursorSnow = [];
-  const BASE_AMBIENT_COUNT = 95;
-  const MAX_BLIZZARD_COUNT = 260;
+  const BASE_AMBIENT_COUNT = isMobileDevice ? 55 : 80;
+  const MAX_BLIZZARD_COUNT = isMobileDevice ? 85 : 145;
+  const MAX_CURSOR_SNOW = 90;
 
-  const TAB_SNOW_DENSITY = [1.0, 1.35, 0.78];
+  const TAB_SNOW_DENSITY = [1.0, 1.25, 0.75];
   let tabDensityTarget = TAB_SNOW_DENSITY[0];
   let tabDensityCurrent = TAB_SNOW_DENSITY[0];
   let tabGustBoost = 0;
@@ -1462,131 +1600,157 @@ document.addEventListener('DOMContentLoaded', () => {
   onTabSwitchedEffect = (tabIdx) => {
     tabDensityTarget = TAB_SNOW_DENSITY[tabIdx] ?? 1.0;
     tabGustBoost = 1.0;
-    spawnProgressParticles(8, true);
-    for (let i = 0; i < 18; i++) {
+    spawnProgressParticles(6, true);
+    const burstCount = isMobileDevice ? 8 : 14;
+    for (let i = 0; i < burstCount; i++) {
+      if (cursorSnow.length >= MAX_CURSOR_SNOW) cursorSnow.shift();
       const angle = Math.random() * Math.PI * 2;
-      const spd = 1.2 + Math.random() * 2.4;
+      const spd = 1.1 + Math.random() * 2.1;
       cursorSnow.push({
-        x: width * 0.5 + (Math.random() - 0.5) * 90,
-        y: height * 0.45 + (Math.random() - 0.5) * 90,
-        speedX: Math.cos(angle) * spd + 1.1,
-        speedY: Math.sin(angle) * spd + 0.6,
-        radius: Math.random() * 2.4 + 1.0,
+        x: viewWidth * 0.5 + (Math.random() - 0.5) * 80,
+        y: viewHeight * 0.45 + (Math.random() - 0.5) * 80,
+        speedX: Math.cos(angle) * spd + 1.0,
+        speedY: Math.sin(angle) * spd + 0.5,
+        radius: Math.random() * 2.1 + 0.9,
         opacity: 0.85,
-        decay: Math.random() * 0.018 + 0.014,
-        swirl: (Math.random() - 0.5) * 0.08
+        decay: Math.random() * 0.018 + 0.015,
+        swirl: (Math.random() - 0.5) * 0.07
       });
     }
   };
 
   for (let i = 0; i < BASE_AMBIENT_COUNT; i++) {
     ambientSnow.push({
-      x: Math.random() * width,
-      y: Math.random() * height,
-      radius: Math.random() * 2.4 + 0.8,
-      speedY: Math.random() * 0.9 + 0.35,
-      speedX: (Math.random() - 0.5) * 0.45,
+      x: Math.random() * viewWidth,
+      y: Math.random() * viewHeight,
+      radius: Math.random() * 2.2 + 0.8,
+      speedY: Math.random() * 0.85 + 0.35,
+      speedX: (Math.random() - 0.5) * 0.4,
       swayPhase: Math.random() * Math.PI * 2,
       swaySpeed: Math.random() * 0.02 + 0.008,
-      opacity: Math.random() * 0.5 + 0.16
+      opacity: Math.random() * 0.48 + 0.16
     });
+  }
+
+  function resetBlizzardFlake(bf, initialScatter = false) {
+    bf.x = initialScatter
+      ? Math.random() * viewWidth
+      : (Math.random() < 0.65 ? Math.random() * (viewWidth + 160) - 80 : -12);
+    bf.y = initialScatter
+      ? Math.random() * viewHeight
+      : (bf.x < 0 ? Math.random() * viewHeight : -10);
+    bf.radius = Math.random() * 2.2 + 0.85;
+    bf.speedY = Math.random() * 3.4 + 2.0;
+    bf.speedX = Math.random() * 4.0 + 2.2;
+    bf.swirlPhase = Math.random() * Math.PI * 2;
+    bf.swirlSpeed = Math.random() * 0.055 + 0.022;
+    bf.opacity = Math.random() * 0.6 + 0.24;
   }
 
   function spawnBlizzardFlake() {
-    const fromTop = Math.random() < 0.65;
-    blizzardSnow.push({
-      x: fromTop ? Math.random() * (width + 200) - 100 : -15,
-      y: fromTop ? -12 : Math.random() * height,
-      radius: Math.random() * 2.8 + 0.9,
-      speedY: Math.random() * 3.8 + 2.2,
-      speedX: Math.random() * 4.5 + 2.4,
-      swirlPhase: Math.random() * Math.PI * 2,
-      swirlSpeed: Math.random() * 0.06 + 0.025,
-      opacity: Math.random() * 0.65 + 0.25
-    });
+    const bf = {};
+    resetBlizzardFlake(bf, false);
+    blizzardSnow.push(bf);
   }
 
-  function spawnCursorFlakes(x, y) {
+  let lastCursorSpawnMs = 0;
+  function spawnCursorFlakes(x, y, force = false) {
+    const now = performance.now();
+    if (!force && now - lastCursorSpawnMs < 22) return;
+    lastCursorSpawnMs = now;
+
     const isBlizzard = blizzardCurrentIntensity > 0.15;
-    const count = isBlizzard ? Math.round(2 + blizzardCurrentIntensity * 7) : 2;
+    const count = isBlizzard ? Math.min(5, Math.round(2 + blizzardCurrentIntensity * 3)) : 2;
     for (let i = 0; i < count; i++) {
+      if (cursorSnow.length >= MAX_CURSOR_SNOW) cursorSnow.shift();
       cursorSnow.push({
-        x: x + (Math.random() - 0.5) * 16,
-        y: y + (Math.random() - 0.5) * 16,
-        radius: Math.random() * 2.6 + 1.1,
-        speedX: isBlizzard ? (2.2 + Math.random() * 3.5) : ((Math.random() - 0.5) * 1.4),
-        speedY: isBlizzard ? (1.8 + Math.random() * 2.4) : (Math.random() * 1.2 + 0.5),
-        opacity: 0.95,
-        decay: Math.random() * 0.016 + 0.012,
-        swirl: isBlizzard ? (Math.random() - 0.5) * 0.16 : 0
+        x: x + (Math.random() - 0.5) * 14,
+        y: y + (Math.random() - 0.5) * 14,
+        radius: Math.random() * 2.3 + 1.0,
+        speedX: isBlizzard ? (2.0 + Math.random() * 3.0) : ((Math.random() - 0.5) * 1.3),
+        speedY: isBlizzard ? (1.6 + Math.random() * 2.1) : (Math.random() * 1.1 + 0.45),
+        opacity: 0.92,
+        decay: Math.random() * 0.017 + 0.014,
+        swirl: isBlizzard ? (Math.random() - 0.5) * 0.14 : 0
       });
     }
   }
-  window.addEventListener('mousemove', (e) => spawnCursorFlakes(e.clientX, e.clientY));
+
+  window.addEventListener('mousemove', (e) => spawnCursorFlakes(e.clientX, e.clientY), { passive: true });
   window.addEventListener('touchmove', (e) => {
-    if (e.touches.length > 0) spawnCursorFlakes(e.touches[0].clientX, e.touches[0].clientY);
+    if (e.touches.length > 0) spawnCursorFlakes(e.touches[0].clientX, e.touches[0].clientY, true);
   }, { passive: true });
 
   function drawFlake(x, y, radius, opacity, stretchX = 0, stretchY = 0) {
+    if (opacity <= 0.01) return;
     ctx.beginPath();
-    if (Math.abs(stretchX) > 0.4 || Math.abs(stretchY) > 0.4) {
+    if (Math.abs(stretchX) > 0.45 || Math.abs(stretchY) > 0.45) {
       ctx.moveTo(x - stretchX, y - stretchY);
       ctx.lineTo(x + stretchX, y + stretchY);
-      ctx.strokeStyle = `rgba(255, 255, 255, ${opacity})`;
-      ctx.lineWidth = radius * 1.15;
+      ctx.strokeStyle = `rgba(255,255,255,${opacity.toFixed(3)})`;
+      ctx.lineWidth = radius * 1.1;
       ctx.lineCap = 'round';
       ctx.stroke();
     } else {
       ctx.arc(x, y, radius, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
+      ctx.fillStyle = `rgba(255,255,255,${opacity.toFixed(3)})`;
       ctx.fill();
     }
   }
 
   function animate(timeMs = 0) {
-    ctx.clearRect(0, 0, width, height);
+    ctx.clearRect(0, 0, viewWidth, viewHeight);
     blizzardCurrentIntensity += (blizzardTargetIntensity - blizzardCurrentIntensity) * 0.025;
     if (blizzardTargetIntensity === 0 && blizzardCurrentIntensity < 0.004) blizzardCurrentIntensity = 0;
 
     tabDensityCurrent += (tabDensityTarget - tabDensityCurrent) * 0.04;
     tabGustBoost *= 0.94;
 
-    const windBoostX = blizzardCurrentIntensity * 4.2 + tabGustBoost * 2.2;
-    const windBoostY = 1 + blizzardCurrentIntensity * 2.4 + tabGustBoost * 0.9;
-    const activeAmbientCount = Math.max(35, Math.min(ambientSnow.length, Math.round(BASE_AMBIENT_COUNT * tabDensityCurrent)));
+    const windBoostX = blizzardCurrentIntensity * 4.0 + tabGustBoost * 2.0;
+    const windBoostY = 1 + blizzardCurrentIntensity * 2.2 + tabGustBoost * 0.85;
+    const activeAmbientCount = Math.max(25, Math.min(ambientSnow.length, Math.round(BASE_AMBIENT_COUNT * tabDensityCurrent)));
+    const streak = blizzardCurrentIntensity * 2.0 + tabGustBoost * 1.0;
 
-    for (let i = 0; i < ambientSnow.length; i++) {
+    for (let i = 0; i < activeAmbientCount; i++) {
       const f = ambientSnow[i];
       f.swayPhase += f.swaySpeed;
       f.y += f.speedY * windBoostY;
-      f.x += f.speedX + windBoostX + Math.sin(f.swayPhase) * 0.3;
-      if (f.y > height + 10) { f.y = -8; f.x = Math.random() * width; }
-      if (f.x > width + 10) f.x = -8;
-      if (f.x < -10) f.x = width + 8;
-      const visibleFactor = i < activeAmbientCount ? 1 : 0.35;
-      const streak = blizzardCurrentIntensity * 2.2 + tabGustBoost * 1.1;
-      drawFlake(f.x, f.y, f.radius, f.opacity * visibleFactor, streak, streak * 0.65);
+      f.x += f.speedX + windBoostX + Math.sin(f.swayPhase) * 0.28;
+      if (f.y > viewHeight + 10) { f.y = -8; f.x = Math.random() * viewWidth; }
+      if (f.x > viewWidth + 10) f.x = -8;
+      if (f.x < -10) f.x = viewWidth + 8;
+      drawFlake(f.x, f.y, f.radius, f.opacity, streak, streak * 0.65);
     }
 
     const desiredBlizzardCount = Math.floor(MAX_BLIZZARD_COUNT * blizzardCurrentIntensity);
     while (blizzardSnow.length < desiredBlizzardCount) spawnBlizzardFlake();
 
+    const blizzardStreakX = 2.6 * blizzardCurrentIntensity;
+    const blizzardStreakY = 1.9 * blizzardCurrentIntensity;
+    const activeBlizzardFactor = Math.max(0.25, blizzardCurrentIntensity);
+
     for (let i = blizzardSnow.length - 1; i >= 0; i--) {
       const bf = blizzardSnow[i];
       bf.swirlPhase += bf.swirlSpeed;
-      const activeFactor = Math.max(0.25, blizzardCurrentIntensity);
-      bf.x += (bf.speedX + Math.cos(bf.swirlPhase) * 1.1) * activeFactor;
-      bf.y += (bf.speedY + Math.sin(bf.swirlPhase) * 0.7) * activeFactor;
-      if (blizzardTargetIntensity === 0) bf.opacity -= 0.008;
-      if (bf.opacity <= 0.01 || bf.y > height + 20 || bf.x > width + 40) {
-        if (blizzardSnow.length > desiredBlizzardCount || bf.opacity <= 0.01) {
+      bf.x += (bf.speedX + Math.cos(bf.swirlPhase) * 1.0) * activeBlizzardFactor;
+      bf.y += (bf.speedY + Math.sin(bf.swirlPhase) * 0.65) * activeBlizzardFactor;
+      if (blizzardTargetIntensity === 0) bf.opacity -= 0.012;
+
+      if (bf.opacity <= 0.01 || bf.y > viewHeight + 18 || bf.x > viewWidth + 32) {
+        if (i >= desiredBlizzardCount || bf.opacity <= 0.01) {
           blizzardSnow.splice(i, 1);
           continue;
         }
-        bf.x = Math.random() < 0.65 ? Math.random() * (width + 200) - 100 : -15;
-        bf.y = bf.x < 0 ? Math.random() * height : -12;
+        resetBlizzardFlake(bf, false);
       }
-      drawFlake(bf.x, bf.y, bf.radius, bf.opacity * Math.min(1, blizzardCurrentIntensity * 1.35), 2.8 * blizzardCurrentIntensity, 2.1 * blizzardCurrentIntensity);
+      drawFlake(
+        bf.x,
+        bf.y,
+        bf.radius,
+        bf.opacity * Math.min(1, blizzardCurrentIntensity * 1.3),
+        blizzardStreakX,
+        blizzardStreakY
+      );
     }
 
     for (let i = cursorSnow.length - 1; i >= 0; i--) {
@@ -1598,7 +1762,8 @@ document.addEventListener('DOMContentLoaded', () => {
       if (p.opacity <= 0) cursorSnow.splice(i, 1);
       else drawFlake(p.x, p.y, p.radius, p.opacity);
     }
+
     requestAnimationFrame(animate);
   }
-  animate();
+  requestAnimationFrame(animate);
 });

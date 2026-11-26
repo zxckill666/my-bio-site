@@ -8,7 +8,6 @@
 </head>
 <body data-accent="neon">
   <canvas id="snow-canvas"></canvas>
-  <div id="cursor-glow" class="cursor-glow" aria-hidden="true"></div>
   <div id="hacker-scanlines" class="hacker-scanlines" aria-hidden="true"></div>
   <div id="copy-toast" class="copy-toast" role="status" aria-live="polite">Скопировано</div>
 
@@ -42,12 +41,20 @@
   <header class="top-player-wrap" aria-label="Аудиоплеер">
     <div id="top-player" class="top-player">
       <audio id="audio-element" src="track.mp3" preload="metadata" crossorigin="anonymous"></audio>
-      <img class="top-player-cover" src="cover.jpg" alt="Обложка The Beginning">
+      <iframe
+        id="sc-widget-iframe"
+        class="sc-hidden-iframe"
+        title="SoundCloud Playlist Player"
+        allow="autoplay"
+        src="https://w.soundcloud.com/player/?url=https%3A//soundcloud.com/kawaimonster87/sets/relaxing&auto_play=false&visual=false">
+      </iframe>
+
+      <img id="player-cover-img" class="top-player-cover" src="cover.jpg" alt="Обложка трека">
 
       <div class="top-player-main">
         <div class="top-player-header">
           <div class="title-and-cava">
-            <span class="top-player-title">The Beginning</span>
+            <span id="player-track-title" class="top-player-title">relaxing playlist</span>
             <canvas id="cava-canvas" class="cava-canvas" width="54" height="16" aria-hidden="true"></canvas>
           </div>
           <span class="top-player-time">
@@ -67,6 +74,13 @@
       </div>
 
       <div class="top-player-actions">
+        <button id="prev-track-btn" class="player-action-btn" type="button" aria-label="Предыдущий трек" title="Предыдущий">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <polygon points="19 5 10 12 19 19 19 5"></polygon>
+            <rect x="6" y="5" width="2.5" height="14" rx="1"></rect>
+          </svg>
+        </button>
+
         <button id="play-pause-btn" class="player-action-btn" type="button" aria-label="Воспроизвести или пауза">
           <svg id="icon-play" viewBox="0 0 24 24" fill="currentColor">
             <polygon points="7 5 20 12 7 19 7 5"></polygon>
@@ -74,6 +88,13 @@
           <svg id="icon-pause" class="hidden-icon" viewBox="0 0 24 24" fill="currentColor">
             <rect x="6" y="5" width="4" height="14" rx="1"></rect>
             <rect x="14" y="5" width="4" height="14" rx="1"></rect>
+          </svg>
+        </button>
+
+        <button id="next-track-btn" class="player-action-btn" type="button" aria-label="Следующий трек" title="Следующий">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <polygon points="5 5 14 12 5 19 5 5"></polygon>
+            <rect x="15.5" y="5" width="2.5" height="14" rx="1"></rect>
           </svg>
         </button>
 
@@ -268,6 +289,7 @@
     </footer>
   </main>
 
+  <script src="https://w.soundcloud.com/player/api.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
