@@ -14,7 +14,7 @@ body {
   background-color: #050505;
   background-image: radial-gradient(circle at 50% 0%, #121215 0%, #050505 75%);
   color: #f3f4f6;
-  overflow-x: hidden;
+  overflow: hidden;
   user-select: none;
 }
 
@@ -229,7 +229,7 @@ body {
   flex-shrink: 0;
 }
 
-/* Полоса прогресса с плавным перетаскиванием и частицами у ползунка */
+/* Полоса прогресса */
 .progress-track-wrap {
   position: relative;
   height: 20px;
@@ -308,7 +308,7 @@ body {
   cursor: grabbing;
 }
 
-/* Кнопки управления и выезжающая вниз полоса громкости */
+/* Кнопки управления и громкость */
 .top-player-actions {
   display: flex;
   align-items: center;
@@ -461,7 +461,150 @@ body {
   z-index: 3;
 }
 
-/* Основной контейнер и 3D-перспектива */
+/* Правая навигация: две пульсирующие точки + подсказка с колесиком мыши */
+.tab-nav-rail {
+  position: fixed;
+  right: 18px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: opacity 0.45s ease, visibility 0.45s ease;
+}
+
+.tab-nav-rail.hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.wheel-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #e4e4e7;
+  background: rgba(16, 16, 22, 0.72);
+  border: 1px solid rgba(129, 140, 248, 0.34);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.55);
+  pointer-events: none;
+  animation: hintFloat 3.4s infinite ease-in-out;
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+.wheel-hint.dismissed {
+  opacity: 0 !important;
+  transform: translateX(8px) scale(0.95);
+  animation: none;
+}
+
+.wheel-mouse-icon {
+  width: 14px;
+  height: 14px;
+  color: #818cf8;
+  flex-shrink: 0;
+}
+
+.wheel-scroll-dot {
+  animation: wheelTick 1.5s infinite ease-in-out;
+}
+
+@keyframes wheelTick {
+  0%, 100% {
+    transform: translateY(0px);
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(2.5px);
+    opacity: 0.45;
+  }
+}
+
+@keyframes hintFloat {
+  0%, 100% {
+    opacity: 0.92;
+    transform: translateX(0px);
+  }
+  50% {
+    opacity: 0.55;
+    transform: translateX(-3px);
+  }
+}
+
+.tab-dots-pill {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 7px;
+  border-radius: 999px;
+  background: rgba(14, 14, 18, 0.56);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.55);
+}
+
+.tab-dot {
+  position: relative;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.28);
+  transition:
+    transform 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 0.3s ease,
+    box-shadow 0.3s ease;
+  animation: dotSubtlePulse 2.4s infinite ease-in-out;
+}
+
+.tab-dot:nth-child(2) {
+  animation-delay: 1.2s;
+}
+
+.tab-dot:hover {
+  transform: scale(1.3);
+  background: rgba(255, 255, 255, 0.65);
+}
+
+.tab-dot.active {
+  background: #ffffff;
+  transform: scale(1.28);
+  box-shadow: 0 0 10px rgba(129, 140, 248, 0.95), 0 0 4px #ffffff;
+  animation: activeDotPulse 2s infinite ease-in-out;
+}
+
+@keyframes dotSubtlePulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(129, 140, 248, 0.35);
+    opacity: 0.72;
+  }
+  50% {
+    box-shadow: 0 0 0 5px rgba(129, 140, 248, 0);
+    opacity: 1;
+  }
+}
+
+@keyframes activeDotPulse {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(129, 140, 248, 0.9), 0 0 0 0 rgba(129, 140, 248, 0.45);
+  }
+  50% {
+    box-shadow: 0 0 14px rgba(129, 140, 248, 1), 0 0 0 6px rgba(129, 140, 248, 0);
+  }
+}
+
+/* Основной контейнер и плавное переключение вкладок (fade + scale + blur) */
 .container {
   position: relative;
   z-index: 10;
@@ -475,7 +618,31 @@ body {
   visibility: hidden;
 }
 
-/* Анимация появления с переворотом */
+.tab-panel {
+  opacity: 0;
+  transform: translateY(14px) scale(0.96);
+  filter: blur(8px);
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+    filter 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+    visibility 0.45s ease;
+}
+
+.tab-panel.active {
+  position: relative;
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  filter: blur(0px);
+  pointer-events: auto;
+  visibility: visible;
+}
+
+/* Анимация появления с переворотом при входе */
 .flip-item {
   opacity: 0;
   transform: perspective(900px) rotateX(-85deg) translateY(25px) scale(0.92);
@@ -491,7 +658,7 @@ body {
   transform: perspective(900px) rotateX(0deg) translateY(0) scale(1);
 }
 
-/* Discord-виджет с рамкой аватара, 3D-подсветкой за курсором и плавным раскрытием статуса + RPC */
+/* Discord-виджет */
 .discord-card {
   --dc-rx: 0deg;
   --dc-ry: 0deg;
@@ -530,12 +697,15 @@ body {
     box-shadow 0.28s ease;
 }
 
-.discord-card:hover {
+.discord-card:not(.is-offline):hover {
   border-color: rgba(129, 140, 248, 0.48);
   box-shadow: 0 14px 34px rgba(0, 0, 0, 0.8), 0 0 22px rgba(129, 140, 248, 0.16);
 }
 
-/* Радиальное свечение, следующее за курсором по карточке Discord */
+.discord-card.is-offline:hover {
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
 .discord-glow {
   position: absolute;
   inset: 0;
@@ -551,7 +721,7 @@ body {
   z-index: 0;
 }
 
-.discord-card:hover .discord-glow {
+.discord-card:not(.is-offline):hover .discord-glow {
   opacity: 1;
 }
 
@@ -586,11 +756,10 @@ body {
   transition: transform 0.3s ease;
 }
 
-.discord-card:hover .discord-avatar {
+.discord-card:not(.is-offline):hover .discord-avatar {
   transform: scale(1.04);
 }
 
-/* Настоящая рамка аватара из Discord (avatar_decoration_data) */
 .discord-avatar-decoration {
   position: absolute;
   top: 50%;
@@ -604,7 +773,7 @@ body {
   transition: transform 0.3s ease;
 }
 
-.discord-card:hover .discord-avatar-decoration {
+.discord-card:not(.is-offline):hover .discord-avatar-decoration {
   transform: translate(-50%, -50%) scale(1.05);
 }
 
@@ -666,6 +835,47 @@ body {
 .discord-status-badge.idle { color: #facc15; background: rgba(234, 179, 8, 0.14); }
 .discord-status-badge.dnd { color: #f87171; background: rgba(239, 68, 68, 0.14); }
 
+.dc-device-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #a1a1aa;
+  flex-shrink: 0;
+  transition: transform 0.2s ease, color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.dc-device-badge:hover {
+  transform: translateY(-1px);
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.24);
+}
+
+.dc-device-badge svg {
+  width: 11px;
+  height: 11px;
+}
+
+.dc-device-badge.online {
+  color: #4ade80;
+  border-color: rgba(34, 197, 94, 0.28);
+}
+
+.dc-device-badge.idle {
+  color: #facc15;
+  border-color: rgba(234, 179, 8, 0.28);
+}
+
+.dc-device-badge.dnd {
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.28);
+}
+
 .discord-summary-line {
   font-size: 11.5px;
   color: #a1a1aa;
@@ -695,17 +905,17 @@ body {
   transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.discord-card:hover .discord-expand-hint {
+.discord-card:not(.is-offline):hover .discord-expand-hint {
   color: #ffffff;
   background: rgba(129, 140, 248, 0.2);
   border-color: rgba(129, 140, 248, 0.4);
 }
 
-.discord-card:hover .hint-arrow {
+.discord-card:not(.is-offline):hover .hint-arrow {
   transform: rotate(180deg);
 }
 
-/* Выпадающий блок кастомного статуса и RPC при наведении */
+/* Выпадающий блок кастомного статуса и RPC (только когда НЕ offline) */
 .discord-rpc-drawer {
   max-height: 0px;
   opacity: 0;
@@ -718,14 +928,13 @@ body {
     margin-top 0.38s ease;
 }
 
-.discord-card:hover .discord-rpc-drawer {
+.discord-card:not(.is-offline):hover .discord-rpc-drawer {
   max-height: 175px;
   opacity: 1;
   transform: translateY(0);
   margin-top: 11px;
 }
 
-/* Анимированный блок кастомного статуса */
 .dc-custom-box {
   display: flex;
   align-items: center;
@@ -744,7 +953,7 @@ body {
     transform 0.38s cubic-bezier(0.22, 1, 0.36, 1) 0.06s;
 }
 
-.discord-card:hover .dc-custom-box {
+.discord-card:not(.is-offline):hover .dc-custom-box {
   opacity: 1;
   transform: translateY(0) scale(1);
 }
@@ -774,7 +983,7 @@ body {
     transform 0.4s cubic-bezier(0.22, 1, 0.36, 1) 0.1s;
 }
 
-.discord-card:hover .discord-rpc-inner {
+.discord-card:not(.is-offline):hover .discord-rpc-inner {
   opacity: 1;
   transform: translateY(0);
 }
@@ -950,8 +1159,124 @@ h1 {
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.72);
 }
 
+/* Вторая вкладка: Мини-игра Динозаврик */
+.dino-card {
+  padding: 16px;
+  border-radius: 16px;
+  background: linear-gradient(145deg, rgba(19, 19, 25, 0.74) 0%, rgba(12, 12, 16, 0.7) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.68), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  text-align: left;
+}
+
+.dino-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.dino-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dino-title {
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 13.5px;
+  font-weight: 700;
+  letter-spacing: 1.4px;
+  color: #ffffff;
+}
+
+.dino-subtitle {
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+.dino-scores {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+  color: #a1a1aa;
+}
+
+.dino-scores strong {
+  color: #818cf8;
+}
+
+#dino-score {
+  color: #f9fafb;
+  font-weight: 700;
+}
+
+.dino-stage {
+  position: relative;
+  width: 100%;
+  height: 165px;
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  background: rgba(8, 8, 12, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+#dino-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.dino-overlay-msg {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: rgba(5, 5, 8, 0.46);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  text-align: center;
+  transition: opacity 0.25s ease, visibility 0.25s ease;
+}
+
+.dino-overlay-msg.hidden-msg {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+#dino-msg-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+#dino-msg-sub {
+  font-size: 11.5px;
+  color: #a1a1aa;
+}
+
 .footer {
-  margin-top: 32px;
+  margin-top: 28px;
   font-size: 13px;
   color: #52525b;
+}
+
+@media (max-width: 520px) {
+  .tab-nav-rail {
+    right: 10px;
+  }
+  .wheel-hint span {
+    display: none;
+  }
 }

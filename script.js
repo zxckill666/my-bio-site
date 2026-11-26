@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   audio.volume = lastNonZeroVolume;
 
-  // 00. Живой Discord профиль, рамка аватара, кастомный статус и RPC через Lanyard
+  // 00. Живой Discord профиль, рамка аватара, устройство и запрет раскрытия при offline
   const DISCORD_USER_ID = '1378047204119547989';
   const discordCard = document.getElementById('discord-card');
   const dcAvatarEl = document.getElementById('dc-avatar');
@@ -35,7 +35,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const dcUsernameEl = document.getElementById('dc-username');
   const dcHandleEl = document.getElementById('dc-handle');
   const dcStatusTextEl = document.getElementById('dc-status-text');
+  const dcDeviceBadgeEl = document.getElementById('dc-device-badge');
   const dcSummaryLineEl = document.getElementById('dc-summary-line');
+  const dcExpandHintEl = document.getElementById('dc-expand-hint');
   const dcCustomBoxEl = document.getElementById('dc-custom-box');
   const dcCustomEmojiEl = document.getElementById('dc-custom-emoji');
   const dcCustomTextEl = document.getElementById('dc-custom-text');
@@ -47,9 +49,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let activeRpcStartMs = null;
 
-  // 3D-наклон и радиальная подсветка за курсором на карточке Discord
+  const DEVICE_ICONS = {
+    desktop: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>',
+    mobile: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="2" width="14" height="20" rx="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>',
+    web: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>'
+  };
+
+  function resolveActiveDevice(data) {
+    if (data?.active_on_discord_desktop) {
+      return { key: 'desktop', label: 'В сети с ПК' };
+    }
+    if (data?.active_on_discord_mobile) {
+      return { key: 'mobile', label: 'В сети с телефона' };
+    }
+    if (data?.active_on_discord_web) {
+      return { key: 'web', label: 'В сети в браузере' };
+    }
+    return null;
+  }
+
+  // 3D-наклон и подсветка карточки Discord (отключается в оффлайне)
   if (discordCard) {
     discordCard.addEventListener('mousemove', (e) => {
+      if (discordCard.classList.contains('is-offline')) return;
       const rect = discordCard.getBoundingClientRect();
       const px = e.clientX - rect.left;
       const py = e.clientY - rect.top;
@@ -112,7 +134,6 @@ document.addEventListener('DOMContentLoaded', () => {
         dcAvatarEl.src = `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.${ext}?size=128`;
       }
 
-      // Рамка аватара из Discord (avatar_decoration_data)
       const decoAsset = user.avatar_decoration_data?.asset;
       if (decoAsset) {
         dcDecorationEl.src = `https://cdn.discordapp.com/avatar-decoration-presets/${decoAsset}.png?size=160&passthrough=true`;
@@ -123,15 +144,45 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const status = data.discord_status || 'offline';
+    const isOffline = status === 'offline';
+
     dcStatusDotEl.className = `dc-status-dot ${status}`;
     dcStatusTextEl.className = `discord-status-badge ${status}`;
-    dcStatusTextEl.textContent = status;
+    dcStatusTextEl.textContent = isOffline ? 'offline' : status;
+
+    const activeDevice = !isOffline ? resolveActiveDevice(data) : null;
+    if (dcDeviceBadgeEl) {
+      if (activeDevice && DEVICE_ICONS[activeDevice.key]) {
+        dcDeviceBadgeEl.innerHTML = DEVICE_ICONS[activeDevice.key];
+        dcDeviceBadgeEl.title = activeDevice.label;
+        dcDeviceBadgeEl.className = `dc-device-badge ${status}`;
+      } else {
+        dcDeviceBadgeEl.innerHTML = '';
+        dcDeviceBadgeEl.className = 'dc-device-badge hidden-icon';
+      }
+    }
+
+    // Если offline — блокируем раскрытие RPC, показываем только "Не в сети"
+    if (isOffline) {
+      discordCard.classList.add('is-offline');
+      discordCard.classList.remove('is-tilting');
+      discordCard.style.setProperty('--dc-rx', '0deg');
+      discordCard.style.setProperty('--dc-ry', '0deg');
+      discordCard.style.setProperty('--dc-ty', '0px');
+      dcExpandHintEl.classList.add('hidden-icon');
+      dcCustomBoxEl.classList.add('hidden-icon');
+      dcSummaryLineEl.textContent = 'Не в сети';
+      activeRpcStartMs = null;
+      return;
+    }
+
+    discordCard.classList.remove('is-offline');
+    dcExpandHintEl.classList.remove('hidden-icon');
 
     const activities = Array.isArray(data.activities) ? data.activities : [];
     const customAct = activities.find((a) => a.type === 4);
     const rpcAct = activities.find((a) => a.type !== 4);
 
-    // Кастомный статус для выезжающей панели при наведении
     const hasCustomText = Boolean(customAct && (customAct.state || customAct.emoji?.name));
     if (hasCustomText) {
       const emojiStr = customAct.emoji?.name && !customAct.emoji?.id ? customAct.emoji.name : '';
@@ -142,7 +193,6 @@ document.addEventListener('DOMContentLoaded', () => {
       dcCustomBoxEl.classList.add('hidden-icon');
     }
 
-    // Краткая строка в свернутом виде
     if (rpcAct) {
       dcSummaryLineEl.textContent = `Играет / активен: ${rpcAct.name}`;
     } else if (hasCustomText) {
@@ -151,7 +201,6 @@ document.addEventListener('DOMContentLoaded', () => {
       dcSummaryLineEl.textContent = 'Наведи, чтобы посмотреть RPC';
     }
 
-    // RPC блок
     if (rpcAct) {
       dcRpcNameEl.textContent = rpcAct.name || 'Активность';
       dcRpcDetailsEl.textContent = rpcAct.details || '';
@@ -250,7 +299,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const alreadyCountedDevice = localStorage.getItem(DEVICE_FLAG_KEY) === '1';
     const alreadyCountedIp = Boolean(visitorIp && seenIps.includes(visitorIp));
     const shouldIncrement = !alreadyCountedDevice && !alreadyCountedIp;
-
     const endpointAction = shouldIncrement ? 'up' : 'get';
 
     try {
@@ -284,7 +332,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const entryScreen = document.getElementById('entry-screen');
   const enterBtn = document.getElementById('enter-btn');
   const mainContent = document.getElementById('main-content');
+  const tabNavRail = document.getElementById('tab-nav-rail');
 
+  let isEntered = false;
   let audioCtx = null;
   let analyser = null;
   let freqData = null;
@@ -313,8 +363,10 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   enterBtn.addEventListener('click', () => {
+    isEntered = true;
     entryScreen.classList.add('fade-out');
     mainContent.classList.remove('hidden');
+    tabNavRail.classList.remove('hidden');
 
     requestAnimationFrame(() => {
       mainContent.classList.add('revealed');
@@ -323,6 +375,303 @@ document.addEventListener('DOMContentLoaded', () => {
     initAudioAnalyser();
     audio.play().catch(() => {});
   });
+
+  // 1.5. Переключение между вкладкой профиля и мини-игрой по колёсику мыши или точкам справа
+  const tabPanels = [
+    document.getElementById('tab-profile'),
+    document.getElementById('tab-dino')
+  ];
+  const tabDots = document.querySelectorAll('.tab-dot');
+  const wheelHint = document.getElementById('wheel-hint');
+  let activeTabIndex = 0;
+  let lastWheelSwitchTime = 0;
+
+  function switchTab(nextIndex) {
+    if (nextIndex < 0 || nextIndex >= tabPanels.length || nextIndex === activeTabIndex) return;
+    activeTabIndex = nextIndex;
+
+    tabPanels.forEach((panel, idx) => {
+      panel.classList.toggle('active', idx === activeTabIndex);
+    });
+    tabDots.forEach((dot, idx) => {
+      dot.classList.toggle('active', idx === activeTabIndex);
+    });
+
+    if (wheelHint && !wheelHint.classList.contains('dismissed')) {
+      wheelHint.classList.add('dismissed');
+    }
+
+    if (activeTabIndex === 1) {
+      resizeDinoCanvas();
+    }
+  }
+
+  tabDots.forEach((dot) => {
+    dot.addEventListener('click', () => {
+      const targetIdx = parseInt(dot.getAttribute('data-tab') || '0', 10);
+      switchTab(targetIdx);
+    });
+  });
+
+  window.addEventListener('wheel', (e) => {
+    if (!isEntered) return;
+    if (Math.abs(e.deltaY) < 12) return;
+
+    const now = Date.now();
+    if (now - lastWheelSwitchTime < 460) return;
+    lastWheelSwitchTime = now;
+
+    if (e.deltaY > 0) {
+      switchTab(activeTabIndex === 0 ? 1 : 0);
+    } else {
+      switchTab(activeTabIndex === 1 ? 0 : 1);
+    }
+  }, { passive: true });
+
+  // Свайп вверх/вниз на телефонах для переключения вкладок
+  let touchStartY = null;
+  window.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 1) {
+      touchStartY = e.touches[0].clientY;
+    }
+  }, { passive: true });
+
+  window.addEventListener('touchend', (e) => {
+    if (!isEntered || touchStartY === null || e.changedTouches.length === 0) return;
+    const diffY = touchStartY - e.changedTouches[0].clientY;
+    touchStartY = null;
+    if (Math.abs(diffY) > 55) {
+      switchTab(diffY > 0 ? 1 : 0);
+    }
+  }, { passive: true });
+
+  // 1.6. Лёгкая мини-игра "Динозаврик" (перепрыгивание через кактусы)
+  const dinoStage = document.getElementById('dino-stage');
+  const dinoCanvas = document.getElementById('dino-canvas');
+  const dinoCtx = dinoCanvas.getContext('2d');
+  const dinoScoreEl = document.getElementById('dino-score');
+  const dinoBestEl = document.getElementById('dino-best');
+  const dinoOverlayMsg = document.getElementById('dino-overlay-msg');
+  const dinoMsgTitle = document.getElementById('dino-msg-title');
+  const dinoMsgSub = document.getElementById('dino-msg-sub');
+
+  const DINO_BEST_KEY = 'sekailauren_dino_best_v1';
+  let dinoBest = parseInt(localStorage.getItem(DINO_BEST_KEY) || '0', 10) || 0;
+  dinoBestEl.textContent = String(dinoBest).padStart(4, '0');
+
+  let dinoW = 380;
+  let dinoH = 165;
+  const GROUND_OFFSET = 26;
+
+  function resizeDinoCanvas() {
+    if (!dinoCanvas) return;
+    const rect = dinoStage.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    dinoW = Math.max(260, Math.floor(rect.width || 380));
+    dinoH = Math.max(140, Math.floor(rect.height || 165));
+    dinoCanvas.width = Math.floor(dinoW * dpr);
+    dinoCanvas.height = Math.floor(dinoH * dpr);
+    dinoCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  resizeDinoCanvas();
+  window.addEventListener('resize', resizeDinoCanvas);
+
+  const dinoState = {
+    running: false,
+    gameOver: false,
+    score: 0,
+    speed: 4.3,
+    groundScroll: 0,
+    nextSpawnFrames: 65,
+    player: {
+      x: 42,
+      y: 0,
+      w: 22,
+      h: 26,
+      vy: 0,
+      grounded: true
+    },
+    cacti: []
+  };
+
+  function resetDinoGame() {
+    dinoState.running = true;
+    dinoState.gameOver = false;
+    dinoState.score = 0;
+    dinoState.speed = 4.3;
+    dinoState.cacti = [];
+    dinoState.nextSpawnFrames = 55;
+    dinoState.player.y = dinoH - GROUND_OFFSET - dinoState.player.h;
+    dinoState.player.vy = 0;
+    dinoState.player.grounded = true;
+    dinoScoreEl.textContent = '0000';
+    dinoOverlayMsg.classList.add('hidden-msg');
+  }
+
+  function triggerDinoAction() {
+    if (activeTabIndex !== 1) return;
+    if (!dinoState.running || dinoState.gameOver) {
+      resetDinoGame();
+      return;
+    }
+    if (dinoState.player.grounded) {
+      dinoState.player.vy = -8.7;
+      dinoState.player.grounded = false;
+    }
+  }
+
+  dinoStage.addEventListener('pointerdown', (e) => {
+    e.stopPropagation();
+    triggerDinoAction();
+  });
+
+  window.addEventListener('keydown', (e) => {
+    if (activeTabIndex !== 1) return;
+    if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') {
+      e.preventDefault();
+      triggerDinoAction();
+    }
+  });
+
+  function drawDinoCharacter(p, timeMs) {
+    dinoCtx.save();
+    dinoCtx.fillStyle = '#f9fafb';
+    dinoCtx.shadowBlur = 8;
+    dinoCtx.shadowColor = 'rgba(129, 140, 248, 0.55)';
+
+    // Тело и голова динозаврика
+    dinoCtx.beginPath();
+    dinoCtx.roundRect(p.x, p.y + 7, p.w - 4, p.h - 11, 4);
+    dinoCtx.roundRect(p.x + 7, p.y, p.w - 7, 12, 4);
+    // Хвост
+    dinoCtx.roundRect(p.x - 5, p.y + 11, 7, 6, 2);
+    dinoCtx.fill();
+
+    // Глаз
+    dinoCtx.fillStyle = '#09090b';
+    dinoCtx.fillRect(p.x + p.w - 6, p.y + 3, 2.5, 2.5);
+
+    // Лапки с анимацией бега
+    dinoCtx.fillStyle = '#e5e7eb';
+    const step = dinoState.running && p.grounded ? Math.sin(timeMs * 0.025) * 2.5 : 0;
+    dinoCtx.fillRect(p.x + 3, p.y + p.h - 5 + step, 4, 5 - step);
+    dinoCtx.fillRect(p.x + 11, p.y + p.h - 5 - step, 4, 5 + step);
+    dinoCtx.restore();
+  }
+
+  function drawCactus(c) {
+    dinoCtx.save();
+    const grad = dinoCtx.createLinearGradient(0, c.y, 0, c.y + c.h);
+    grad.addColorStop(0, '#38bdf8');
+    grad.addColorStop(0.55, '#818cf8');
+    grad.addColorStop(1, '#f472b6');
+
+    dinoCtx.fillStyle = grad;
+    dinoCtx.shadowBlur = 7;
+    dinoCtx.shadowColor = 'rgba(129, 140, 248, 0.45)';
+
+    // Центральный ствол кактуса
+    const trunkW = Math.max(6, c.w * 0.44);
+    const trunkX = c.x + (c.w - trunkW) / 2;
+    dinoCtx.beginPath();
+    dinoCtx.roundRect(trunkX, c.y, trunkW, c.h, 3);
+    // Боковые ветки кактуса
+    dinoCtx.roundRect(c.x, c.y + c.h * 0.28, trunkX - c.x + 2, 4, 2);
+    dinoCtx.roundRect(c.x, c.y + c.h * 0.14, 4, c.h * 0.24, 2);
+    dinoCtx.roundRect(trunkX + trunkW - 2, c.y + c.h * 0.38, c.x + c.w - (trunkX + trunkW) + 2, 4, 2);
+    dinoCtx.roundRect(c.x + c.w - 4, c.y + c.h * 0.22, 4, c.h * 0.24, 2);
+    dinoCtx.fill();
+    dinoCtx.restore();
+  }
+
+  function stepAndRenderDino(timeMs) {
+    dinoCtx.clearRect(0, 0, dinoW, dinoH);
+    const groundY = dinoH - GROUND_OFFSET;
+
+    if (!dinoState.running && !dinoState.gameOver) {
+      dinoState.player.y = groundY - dinoState.player.h;
+    }
+
+    // Линия земли и бегущие штрихи
+    dinoCtx.strokeStyle = 'rgba(255, 255, 255, 0.18)';
+    dinoCtx.lineWidth = 1.5;
+    dinoCtx.beginPath();
+    dinoCtx.moveTo(0, groundY);
+    dinoCtx.lineTo(dinoW, groundY);
+    dinoCtx.stroke();
+
+    if (dinoState.running && !dinoState.gameOver) {
+      dinoState.groundScroll = (dinoState.groundScroll + dinoState.speed) % 28;
+    }
+    dinoCtx.fillStyle = 'rgba(255, 255, 255, 0.16)';
+    for (let gx = -dinoState.groundScroll; gx < dinoW; gx += 28) {
+      dinoCtx.fillRect(gx, groundY + 6, 10, 2);
+    }
+
+    if (dinoState.running && !dinoState.gameOver) {
+      // Физика прыжка
+      const p = dinoState.player;
+      p.vy += 0.44;
+      p.y += p.vy;
+      if (p.y >= groundY - p.h) {
+        p.y = groundY - p.h;
+        p.vy = 0;
+        p.grounded = true;
+      }
+
+      // Спавн кактусов
+      dinoState.nextSpawnFrames -= 1;
+      if (dinoState.nextSpawnFrames <= 0) {
+        const h = 22 + Math.floor(Math.random() * 14);
+        const w = 14 + Math.floor(Math.random() * 7);
+        dinoState.cacti.push({
+          x: dinoW + 12,
+          y: groundY - h,
+          w,
+          h
+        });
+        dinoState.nextSpawnFrames = Math.max(44, Math.floor(72 + Math.random() * 48 - dinoState.speed * 2.2));
+      }
+
+      // Движение кактусов и проверка столкновений
+      for (let i = dinoState.cacti.length - 1; i >= 0; i--) {
+        const c = dinoState.cacti[i];
+        c.x -= dinoState.speed;
+
+        const pad = 4;
+        const hitX = p.x + pad < c.x + c.w - pad && p.x + p.w - pad > c.x + pad;
+        const hitY = p.y + pad < c.y + c.h - pad && p.y + p.h - pad > c.y + pad;
+
+        if (hitX && hitY) {
+          dinoState.gameOver = true;
+          dinoState.running = false;
+          const finalScore = Math.floor(dinoState.score);
+          if (finalScore > dinoBest) {
+            dinoBest = finalScore;
+            localStorage.setItem(DINO_BEST_KEY, String(dinoBest));
+            dinoBestEl.textContent = String(dinoBest).padStart(4, '0');
+          }
+          dinoMsgTitle.textContent = `Игра окончена · Счёт: ${finalScore}`;
+          dinoMsgSub.textContent = 'Нажми Space или кликни, чтобы сыграть снова';
+          dinoOverlayMsg.classList.remove('hidden-msg');
+        }
+
+        if (c.x + c.w < -10) {
+          dinoState.cacti.splice(i, 1);
+        }
+      }
+
+      dinoState.score += 0.16;
+      dinoState.speed = Math.min(8.6, 4.3 + dinoState.score * 0.0045);
+      dinoScoreEl.textContent = String(Math.floor(dinoState.score)).padStart(4, '0');
+    }
+
+    for (let i = 0; i < dinoState.cacti.length; i++) {
+      drawCactus(dinoState.cacti[i]);
+    }
+    drawDinoCharacter(dinoState.player, timeMs);
+  }
 
   // 2. Плавное перемещение проигрывателя по экрану с интерполяцией
   let isPlayerDragging = false;
@@ -829,6 +1178,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     renderCavaBars(timeMs);
 
+    if (activeTabIndex === 1) {
+      stepAndRenderDino(timeMs);
+    }
+
     const progFactor = isScrubbing ? 0.65 : 0.18;
     smoothProgressPercent += (targetProgressPercent - smoothProgressPercent) * progFactor;
     progressFill.style.width = `${smoothProgressPercent.toFixed(3)}%`;
@@ -887,7 +1240,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   requestAnimationFrame(renderSlidersAndParticles);
 
-  // 8. Анимация снежинок на фоне (увеличено количество) и за курсором
+  // 8. Анимация снежинок на фоне и за курсором
   const canvas = document.getElementById('snow-canvas');
   const ctx = canvas.getContext('2d');
 

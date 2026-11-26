@@ -112,74 +112,116 @@
     </div>
   </header>
 
-  <!-- Основной контент -->
+  <!-- Навигация справа: две пульсирующие точки + подсказка с иконкой колесика мыши -->
+  <aside id="tab-nav-rail" class="tab-nav-rail hidden" aria-label="Переключение вкладок">
+    <div id="wheel-hint" class="wheel-hint" aria-hidden="true">
+      <svg class="wheel-mouse-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="6" y="2" width="12" height="20" rx="6"></rect>
+        <line class="wheel-scroll-dot" x1="12" y1="6" x2="12" y2="10"></line>
+      </svg>
+      <span>Колёсико</span>
+    </div>
+
+    <div class="tab-dots-pill">
+      <button type="button" class="tab-dot active" data-tab="0" aria-label="Профиль и ссылки"></button>
+      <button type="button" class="tab-dot" data-tab="1" aria-label="Мини-игра Динозаврик"></button>
+    </div>
+  </aside>
+
+  <!-- Основной контейнер с плавным переключением вкладок -->
   <main id="main-content" class="container hidden">
-    <header class="profile flip-item" style="--delay: 0.05s;">
-      <img class="avatar-img" src="avatar.jpg" alt="Аватар sekailauren">
-      <h1>sekailauren</h1>
-      <p class="bio">16 y. o. вайбкодер, делаю разные проекты на python, C++.</p>
-    </header>
+    <!-- Вкладка 1: Аватарка, Discord профиль/RPC и кнопки ссылок -->
+    <section id="tab-profile" class="tab-panel active">
+      <header class="profile flip-item" style="--delay: 0.05s;">
+        <img class="avatar-img" src="avatar.jpg" alt="Аватар sekailauren">
+        <h1>sekailauren</h1>
+        <p class="bio">16 y. o. вайбкодер, делаю разные проекты на python, C++.</p>
+      </header>
 
-    <!-- Discord-профиль с рамкой аватара, 3D-подсветкой и выезжающими кастомным статусом + RPC -->
-    <section id="discord-card" class="discord-card flip-item" style="--delay: 0.12s;" aria-label="Discord профиль и активность">
-      <div class="discord-glow" aria-hidden="true"></div>
+      <!-- Discord-профиль: при оффлайне не раскрывается -->
+      <section id="discord-card" class="discord-card is-offline flip-item" style="--delay: 0.12s;" aria-label="Discord профиль и активность">
+        <div class="discord-glow" aria-hidden="true"></div>
 
-      <div class="discord-compact">
-        <div class="discord-avatar-box">
-          <img id="dc-avatar" class="discord-avatar" src="avatar.jpg" alt="Discord аватар">
-          <img id="dc-avatar-decoration" class="discord-avatar-decoration hidden-icon" src="" alt="" aria-hidden="true">
-          <span id="dc-status-dot" class="dc-status-dot offline" title="Статус Discord"></span>
-        </div>
-
-        <div class="discord-user-meta">
-          <div class="discord-name-row">
-            <span id="dc-username" class="discord-username">sekailauren</span>
-            <span id="dc-handle" class="discord-handle">@hurukoo</span>
-            <span id="dc-status-text" class="discord-status-badge offline">offline</span>
+        <div class="discord-compact">
+          <div class="discord-avatar-box">
+            <img id="dc-avatar" class="discord-avatar" src="avatar.jpg" alt="Discord аватар">
+            <img id="dc-avatar-decoration" class="discord-avatar-decoration hidden-icon" src="" alt="" aria-hidden="true">
+            <span id="dc-status-dot" class="dc-status-dot offline" title="Статус Discord"></span>
           </div>
-          <p id="dc-summary-line" class="discord-summary-line">Наведи, чтобы раскрыть статус и RPC</p>
-        </div>
 
-        <span class="discord-expand-hint" aria-hidden="true">
-          <span class="hint-label">RPC</span>
-          <span class="hint-arrow">▾</span>
-        </span>
-      </div>
-
-      <div id="discord-rpc-drawer" class="discord-rpc-drawer">
-        <!-- Кастомный статус (выезжает плавно при наведении) -->
-        <div id="dc-custom-box" class="dc-custom-box hidden-icon">
-          <span id="dc-custom-emoji" class="dc-custom-emoji"></span>
-          <span id="dc-custom-text" class="dc-custom-text"></span>
-        </div>
-
-        <!-- Блок активности RPC -->
-        <div class="discord-rpc-inner">
-          <img id="dc-rpc-img" class="dc-rpc-img hidden-icon" src="" alt="Иконка активности">
-          <div class="dc-rpc-text">
-            <div id="dc-rpc-name" class="dc-rpc-name">Нет активного RPC</div>
-            <div id="dc-rpc-details" class="dc-rpc-line">Запусти игру, код или музыку в Discord</div>
-            <div id="dc-rpc-state" class="dc-rpc-line"></div>
+          <div class="discord-user-meta">
+            <div class="discord-name-row">
+              <span id="dc-username" class="discord-username">sekailauren</span>
+              <span id="dc-handle" class="discord-handle">@hurukoo</span>
+              <span id="dc-status-text" class="discord-status-badge offline">offline</span>
+              <span id="dc-device-badge" class="dc-device-badge hidden-icon" title="Устройство"></span>
+            </div>
+            <p id="dc-summary-line" class="discord-summary-line">Не в сети</p>
           </div>
-          <div id="dc-rpc-elapsed" class="dc-rpc-elapsed"></div>
+
+          <span id="dc-expand-hint" class="discord-expand-hint hidden-icon" aria-hidden="true">
+            <span class="hint-label">RPC</span>
+            <span class="hint-arrow">▾</span>
+          </span>
+        </div>
+
+        <div id="discord-rpc-drawer" class="discord-rpc-drawer">
+          <div id="dc-custom-box" class="dc-custom-box hidden-icon">
+            <span id="dc-custom-emoji" class="dc-custom-emoji"></span>
+            <span id="dc-custom-text" class="dc-custom-text"></span>
+          </div>
+
+          <div class="discord-rpc-inner">
+            <img id="dc-rpc-img" class="dc-rpc-img hidden-icon" src="" alt="Иконка активности">
+            <div class="dc-rpc-text">
+              <div id="dc-rpc-name" class="dc-rpc-name">Нет активного RPC</div>
+              <div id="dc-rpc-details" class="dc-rpc-line">Запусти игру, код или музыку в Discord</div>
+              <div id="dc-rpc-state" class="dc-rpc-line"></div>
+            </div>
+            <div id="dc-rpc-elapsed" class="dc-rpc-elapsed"></div>
+          </div>
+        </div>
+      </section>
+
+      <nav class="links" aria-label="Основные ссылки">
+        <a class="link-btn tg-btn tilt-btn flip-item" style="--delay: 0.22s;" href="https://t.me/sekailauren" target="_blank" rel="noopener">
+          <span>Telegram</span>
+        </a>
+        <a class="link-btn gray-btn tilt-btn flip-item" style="--delay: 0.34s;" href="https://github.com/zxckill666" target="_blank" rel="noopener">
+          <span>GitHub</span>
+        </a>
+        <a class="link-btn gray-btn tilt-btn flip-item" style="--delay: 0.46s;" href="https://soundcloud.com/kawaimonster87" target="_blank" rel="noopener">
+          <span>SoundCloud</span>
+        </a>
+        <a class="link-btn gray-btn tilt-btn flip-item" style="--delay: 0.58s;" href="mailto:bilyaeva.02031993@outlook.com">
+          <span>Написать на почту</span>
+        </a>
+      </nav>
+    </section>
+
+    <!-- Вкладка 2: Лёгкая игра в динозаврика -->
+    <section id="tab-dino" class="tab-panel" aria-label="Мини-игра Динозаврик">
+      <div class="dino-card">
+        <div class="dino-header">
+          <div class="dino-title-group">
+            <span class="dino-title">DINO RUN</span>
+            <span class="dino-subtitle">Space / ↑ / Клик — прыжок</span>
+          </div>
+          <div class="dino-scores">
+            <span>HI <strong id="dino-best">0000</strong></span>
+            <span id="dino-score">0000</span>
+          </div>
+        </div>
+
+        <div id="dino-stage" class="dino-stage">
+          <canvas id="dino-canvas" width="380" height="165"></canvas>
+          <div id="dino-overlay-msg" class="dino-overlay-msg">
+            <span id="dino-msg-title">Нажми Space или кликни</span>
+            <span id="dino-msg-sub">Перепрыгивай кактусы</span>
+          </div>
         </div>
       </div>
     </section>
-
-    <nav class="links" aria-label="Основные ссылки">
-      <a class="link-btn tg-btn tilt-btn flip-item" style="--delay: 0.22s;" href="https://t.me/sekailauren" target="_blank" rel="noopener">
-        <span>Telegram</span>
-      </a>
-      <a class="link-btn gray-btn tilt-btn flip-item" style="--delay: 0.34s;" href="https://github.com/zxckill666" target="_blank" rel="noopener">
-        <span>GitHub</span>
-      </a>
-      <a class="link-btn gray-btn tilt-btn flip-item" style="--delay: 0.46s;" href="https://soundcloud.com/kawaimonster87" target="_blank" rel="noopener">
-        <span>SoundCloud</span>
-      </a>
-      <a class="link-btn gray-btn tilt-btn flip-item" style="--delay: 0.58s;" href="mailto:bilyaeva.02031993@outlook.com">
-        <span>Написать на почту</span>
-      </a>
-    </nav>
 
     <footer class="footer flip-item" style="--delay: 0.70s;">
       <span>© 2026</span>
