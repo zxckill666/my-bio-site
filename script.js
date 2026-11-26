@@ -1,5 +1,4 @@
 document.addEventListener('DOMContentLoaded', () => {
-  // -01. Автоопределение устройства (телефон / планшет / ПК)
   function detectDeviceEnvironment() {
     const ua = navigator.userAgent || '';
     const isMobileUa = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
@@ -16,20 +15,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const dinoSubtitle = document.getElementById('dino-subtitle');
     const dinoMsgTitle = document.getElementById('dino-msg-title');
 
-    if (wheelHintLabel) {
-      wheelHintLabel.textContent = isMobile ? 'Свайп' : 'Колёсико';
-    }
+    if (wheelHintLabel) wheelHintLabel.textContent = isMobile ? 'Свайп' : 'Колёсико';
     if (dinoSubtitle) {
       dinoSubtitle.textContent = isMobile
         ? 'Тап — прыжок · Удержание — присесть'
         : 'Space / ↑ — прыжок · ↓ — присесть';
     }
     if (dinoMsgTitle) {
-      dinoMsgTitle.textContent = isMobile
-        ? 'Нажми на экран, чтобы начать'
-        : 'Нажми Space или кликни';
+      dinoMsgTitle.textContent = isMobile ? 'Нажми на экран, чтобы начать' : 'Нажми Space или кликни';
     }
-
     return isMobile;
   }
 
@@ -59,13 +53,11 @@ document.addEventListener('DOMContentLoaded', () => {
   let lastNonZeroVolume = parseFloat(volumeSlider.value) || 0.75;
   let targetVolumePercent = lastNonZeroVolume * 100;
   let smoothVolumePercent = targetVolumePercent;
-
   let targetProgressPercent = 0;
   let smoothProgressPercent = 0;
-
   audio.volume = lastNonZeroVolume;
 
-  // 00. Живой Discord профиль, рамка аватара, устройство и запрет раскрытия при offline
+  // Discord Lanyard
   const DISCORD_USER_ID = '1378047204119547989';
   const discordCard = document.getElementById('discord-card');
   const dcAvatarEl = document.getElementById('dc-avatar');
@@ -89,21 +81,15 @@ document.addEventListener('DOMContentLoaded', () => {
   let activeRpcStartMs = null;
 
   const DEVICE_ICONS = {
-    desktop: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>',
-    mobile: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="2" width="14" height="20" rx="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>',
-    web: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>'
+    desktop: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>',
+    mobile: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>',
+    web: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>'
   };
 
   function resolveActiveDevice(data) {
-    if (data?.active_on_discord_desktop) {
-      return { key: 'desktop', label: 'В сети с ПК' };
-    }
-    if (data?.active_on_discord_mobile) {
-      return { key: 'mobile', label: 'В сети с телефона' };
-    }
-    if (data?.active_on_discord_web) {
-      return { key: 'web', label: 'В сети в браузере' };
-    }
+    if (data?.active_on_discord_desktop) return { key: 'desktop', label: 'В сети с ПК' };
+    if (data?.active_on_discord_mobile) return { key: 'mobile', label: 'В сети с телефона' };
+    if (data?.active_on_discord_web) return { key: 'web', label: 'В сети в браузере' };
     return null;
   }
 
@@ -113,19 +99,14 @@ document.addEventListener('DOMContentLoaded', () => {
       const rect = discordCard.getBoundingClientRect();
       const px = e.clientX - rect.left;
       const py = e.clientY - rect.top;
-      const relX = px / rect.width - 0.5;
-      const relY = py / rect.height - 0.5;
-
-      discordCard.classList.add('is-tilting');
       discordCard.style.setProperty('--mx', `${px.toFixed(1)}px`);
       discordCard.style.setProperty('--my', `${py.toFixed(1)}px`);
-      discordCard.style.setProperty('--dc-rx', `${(-relY * 9).toFixed(2)}deg`);
-      discordCard.style.setProperty('--dc-ry', `${(relX * 9).toFixed(2)}deg`);
+      discordCard.style.setProperty('--dc-rx', `${(-(py / rect.height - 0.5) * 9).toFixed(2)}deg`);
+      discordCard.style.setProperty('--dc-ry', `${((px / rect.width - 0.5) * 9).toFixed(2)}deg`);
       discordCard.style.setProperty('--dc-ty', '-2px');
     });
 
     discordCard.addEventListener('mouseleave', () => {
-      discordCard.classList.remove('is-tilting');
       discordCard.style.setProperty('--dc-rx', '0deg');
       discordCard.style.setProperty('--dc-ry', '0deg');
       discordCard.style.setProperty('--dc-ty', '0px');
@@ -138,16 +119,11 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function resolveRpcAssetUrl(activity, discordUserId) {
-    const assets = activity?.assets;
+    const raw = activity?.assets?.large_image || activity?.assets?.small_image;
     const appId = activity?.application_id;
-    const raw = assets?.large_image || assets?.small_image;
     if (!raw) return '';
-    if (raw.startsWith('mp:external/')) {
-      return `https://media.discordapp.net/external/${raw.replace('mp:external/', '')}`;
-    }
-    if (appId) {
-      return `https://cdn.discordapp.com/app-assets/${appId}/${raw}.png`;
-    }
+    if (raw.startsWith('mp:external/')) return `https://media.discordapp.net/external/${raw.replace('mp:external/', '')}`;
+    if (appId) return `https://cdn.discordapp.com/app-assets/${appId}/${raw}.png`;
     return `https://cdn.discordapp.com/avatars/${discordUserId}/${raw}.png`;
   }
 
@@ -157,26 +133,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const hrs = Math.floor(diffSec / 3600);
     const mins = Math.floor((diffSec % 3600) / 60);
     const secs = diffSec % 60;
-    if (hrs > 0) {
-      return `${hrs}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-    }
-    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    return hrs > 0
+      ? `${hrs}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
+      : `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   }
 
   function renderLanyardPresence(data) {
     if (!data) return;
-
     const user = data.discord_user;
     if (user) {
       dcUsernameEl.textContent = user.global_name || user.username || 'sekailauren';
       dcHandleEl.textContent = user.username ? `@${user.username}` : '';
-
       if (user.avatar) {
-        const isAnimatedAvatar = user.avatar.startsWith('a_');
-        const ext = isAnimatedAvatar ? 'gif' : 'png';
+        const ext = user.avatar.startsWith('a_') ? 'gif' : 'png';
         dcAvatarEl.src = `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.${ext}?size=128`;
       }
-
       const decoAsset = user.avatar_decoration_data?.asset;
       if (decoAsset) {
         dcDecorationEl.src = `https://cdn.discordapp.com/avatar-decoration-presets/${decoAsset}.png?size=160&passthrough=true`;
@@ -188,7 +159,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const status = data.discord_status || 'offline';
     const isOffline = status === 'offline';
-
     dcStatusDotEl.className = `dc-status-dot ${status}`;
     dcStatusTextEl.className = `discord-status-badge ${status}`;
     dcStatusTextEl.textContent = isOffline ? 'offline' : status;
@@ -207,10 +177,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (isOffline) {
       discordCard.classList.add('is-offline');
-      discordCard.classList.remove('is-tilting', 'mobile-expanded');
-      discordCard.style.setProperty('--dc-rx', '0deg');
-      discordCard.style.setProperty('--dc-ry', '0deg');
-      discordCard.style.setProperty('--dc-ty', '0px');
       dcExpandHintEl.classList.add('hidden-icon');
       dcCustomBoxEl.classList.add('hidden-icon');
       dcSummaryLineEl.textContent = 'Не в сети';
@@ -227,8 +193,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const hasCustomText = Boolean(customAct && (customAct.state || customAct.emoji?.name));
     if (hasCustomText) {
-      const emojiStr = customAct.emoji?.name && !customAct.emoji?.id ? customAct.emoji.name : '';
-      dcCustomEmojiEl.textContent = emojiStr;
+      dcCustomEmojiEl.textContent = customAct.emoji?.name && !customAct.emoji?.id ? customAct.emoji.name : '';
       dcCustomTextEl.textContent = customAct.state || '';
       dcCustomBoxEl.classList.remove('hidden-icon');
     } else {
@@ -250,7 +215,6 @@ document.addEventListener('DOMContentLoaded', () => {
       dcRpcStateEl.textContent = rpcAct.state || '';
       activeRpcStartMs = rpcAct.timestamps?.start || null;
       dcRpcElapsedEl.textContent = activeRpcStartMs ? formatElapsed(activeRpcStartMs) : '';
-
       const imgUrl = resolveRpcAssetUrl(rpcAct, user?.id || DISCORD_USER_ID);
       if (imgUrl) {
         dcRpcImgEl.src = imgUrl;
@@ -271,50 +235,33 @@ document.addEventListener('DOMContentLoaded', () => {
   function initLanyard() {
     fetch(`https://api.lanyard.rest/v1/users/${DISCORD_USER_ID}`, { cache: 'no-store' })
       .then((res) => (res.ok ? res.json() : Promise.reject()))
-      .then((json) => {
-        if (json?.success && json?.data) {
-          renderLanyardPresence(json.data);
-        }
-      })
+      .then((json) => { if (json?.success && json?.data) renderLanyardPresence(json.data); })
       .catch(() => {});
 
     let heartbeatId = null;
     const ws = new WebSocket('wss://api.lanyard.rest/socket');
-
     ws.addEventListener('message', (event) => {
       try {
         const payload = JSON.parse(event.data);
         if (payload.op === 1 && payload.d?.heartbeat_interval) {
-          ws.send(JSON.stringify({
-            op: 2,
-            d: { subscribe_to_id: DISCORD_USER_ID }
-          }));
+          ws.send(JSON.stringify({ op: 2, d: { subscribe_to_id: DISCORD_USER_ID } }));
           clearInterval(heartbeatId);
           heartbeatId = setInterval(() => {
-            if (ws.readyState === WebSocket.OPEN) {
-              ws.send(JSON.stringify({ op: 3 }));
-            }
+            if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ op: 3 }));
           }, payload.d.heartbeat_interval);
         } else if (payload.op === 0 && (payload.t === 'INIT_STATE' || payload.t === 'PRESENCE_UPDATE')) {
           renderLanyardPresence(payload.d);
         }
       } catch (_) {}
     });
-
-    ws.addEventListener('close', () => {
-      clearInterval(heartbeatId);
-    });
-
+    ws.addEventListener('close', () => clearInterval(heartbeatId));
     setInterval(() => {
-      if (activeRpcStartMs) {
-        dcRpcElapsedEl.textContent = formatElapsed(activeRpcStartMs);
-      }
+      if (activeRpcStartMs) dcRpcElapsedEl.textContent = formatElapsed(activeRpcStartMs);
     }, 1000);
   }
-
   initLanyard();
 
-  // 0. Уникальный счетчик просмотров с защитой от накрутки с одного IP / устройства
+  // Счетчик просмотров
   const viewsCountEl = document.getElementById('views-count');
   const COUNTER_NAMESPACE = 'sekailauren_bio_unique_2026';
   const COUNTER_KEY = 'visits';
@@ -335,43 +282,29 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       seenIps = JSON.parse(localStorage.getItem(SEEN_IPS_KEY) || '[]');
       if (!Array.isArray(seenIps)) seenIps = [];
-    } catch (_) {
-      seenIps = [];
-    }
+    } catch (_) { seenIps = []; }
 
-    const alreadyCountedDevice = localStorage.getItem(DEVICE_FLAG_KEY) === '1';
-    const alreadyCountedIp = Boolean(visitorIp && seenIps.includes(visitorIp));
-    const shouldIncrement = !alreadyCountedDevice && !alreadyCountedIp;
-    const endpointAction = shouldIncrement ? 'up' : 'get';
-
+    const shouldIncrement = localStorage.getItem(DEVICE_FLAG_KEY) !== '1' && !(visitorIp && seenIps.includes(visitorIp));
     try {
-      const res = await fetch(`https://api.counterapi.dev/v1/${COUNTER_NAMESPACE}/${COUNTER_KEY}/${endpointAction}`, {
-        cache: 'no-store'
-      });
-      if (!res.ok) throw new Error('counter failed');
+      const res = await fetch(`https://api.counterapi.dev/v1/${COUNTER_NAMESPACE}/${COUNTER_KEY}/${shouldIncrement ? 'up' : 'get'}`, { cache: 'no-store' });
+      if (!res.ok) throw new Error();
       const data = await res.json();
-      const val = typeof data?.count === 'number'
-        ? data.count
-        : (typeof data?.value === 'number' ? data.value : 1);
-
+      const val = typeof data?.count === 'number' ? data.count : (typeof data?.value === 'number' ? data.value : 1);
       viewsCountEl.textContent = String(Math.max(1, val));
-
       if (shouldIncrement) {
         localStorage.setItem(DEVICE_FLAG_KEY, '1');
-        if (visitorIp && !seenIps.includes(visitorIp)) {
+        if (visitorIp) {
           seenIps.push(visitorIp);
           localStorage.setItem(SEEN_IPS_KEY, JSON.stringify(seenIps.slice(-20)));
         }
       }
     } catch (_) {
       viewsCountEl.textContent = '1';
-      localStorage.setItem(DEVICE_FLAG_KEY, '1');
     }
   }
-
   updateUniqueViewsCounter();
 
-  // 1. Логика входа по клику на >my bio<
+  // Вход по >my bio<
   const entryScreen = document.getElementById('entry-screen');
   const enterBtn = document.getElementById('enter-btn');
   const mainContent = document.getElementById('main-content');
@@ -384,9 +317,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function initAudioAnalyser() {
     if (audioCtx) {
-      if (audioCtx.state === 'suspended') {
-        audioCtx.resume().catch(() => {});
-      }
+      if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
       return;
     }
     try {
@@ -410,16 +341,12 @@ document.addEventListener('DOMContentLoaded', () => {
     entryScreen.classList.add('fade-out');
     mainContent.classList.remove('hidden');
     tabNavRail.classList.remove('hidden');
-
-    requestAnimationFrame(() => {
-      mainContent.classList.add('revealed');
-    });
-
+    requestAnimationFrame(() => mainContent.classList.add('revealed'));
     initAudioAnalyser();
     audio.play().catch(() => {});
   });
 
-  // 1.3. Пасхалка: 4 клика по © 2026 или набор "hack" включают хакерский режим / сканлайн
+  // Пасхалка на © 2026 или набор "hack"
   const footerCopyright = document.getElementById('footer-copyright');
   let copyrightClicks = 0;
   let copyrightClickTimer = null;
@@ -438,10 +365,7 @@ document.addEventListener('DOMContentLoaded', () => {
     footerCopyright.addEventListener('click', () => {
       copyrightClicks += 1;
       clearTimeout(copyrightClickTimer);
-      copyrightClickTimer = setTimeout(() => {
-        copyrightClicks = 0;
-      }, 1500);
-
+      copyrightClickTimer = setTimeout(() => { copyrightClicks = 0; }, 1500);
       if (copyrightClicks >= 4) {
         copyrightClicks = 0;
         triggerHackerEasterEgg(4200);
@@ -449,7 +373,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 1.4. Пасхалка: 5 кликов по аватарке запускают плавную метель, остановка на Q
+  // Пасхалка-метель на аватарке
   const mainAvatar = document.getElementById('main-avatar');
   const blizzardBadge = document.getElementById('blizzard-badge');
   let avatarClickCount = 0;
@@ -460,43 +384,31 @@ document.addEventListener('DOMContentLoaded', () => {
   function startBlizzard() {
     blizzardTargetIntensity = 1;
     document.body.classList.add('blizzard-active');
-    if (blizzardBadge) {
-      blizzardBadge.classList.add('visible');
-    }
+    if (blizzardBadge) blizzardBadge.classList.add('visible');
   }
 
   function stopBlizzard() {
     if (blizzardTargetIntensity === 0 && blizzardCurrentIntensity < 0.01) return;
     blizzardTargetIntensity = 0;
     document.body.classList.remove('blizzard-active');
-    if (blizzardBadge) {
-      blizzardBadge.classList.remove('visible');
-    }
+    if (blizzardBadge) blizzardBadge.classList.remove('visible');
   }
 
   if (mainAvatar) {
     mainAvatar.addEventListener('click', () => {
       avatarClickCount += 1;
       clearTimeout(avatarClickResetTimer);
-      avatarClickResetTimer = setTimeout(() => {
-        avatarClickCount = 0;
-      }, 1800);
-
+      avatarClickResetTimer = setTimeout(() => { avatarClickCount = 0; }, 1800);
       if (avatarClickCount >= 5) {
         avatarClickCount = 0;
         startBlizzard();
       }
     });
   }
+  if (blizzardBadge) blizzardBadge.addEventListener('click', stopBlizzard);
 
-  if (blizzardBadge) {
-    blizzardBadge.addEventListener('click', stopBlizzard);
-  }
-
-  // Хуки для реакции снега и частиц при переключении вкладок (объявляются до switchTab)
+  // Переключение вкладок + реакция снега и частиц
   let onTabSwitchedEffect = null;
-
-  // 1.5. Переключение между вкладками по колёсику мыши, свайпу или точкам справа
   const tabPanels = [
     document.getElementById('tab-profile'),
     document.getElementById('tab-dino'),
@@ -513,65 +425,43 @@ document.addEventListener('DOMContentLoaded', () => {
     if (normalized === activeTabIndex) return;
     activeTabIndex = normalized;
 
-    tabPanels.forEach((panel, idx) => {
-      panel.classList.toggle('active', idx === activeTabIndex);
-    });
-    tabDots.forEach((dot, idx) => {
-      dot.classList.toggle('active', idx === activeTabIndex);
-    });
+    tabPanels.forEach((panel, idx) => panel.classList.toggle('active', idx === activeTabIndex));
+    tabDots.forEach((dot, idx) => dot.classList.toggle('active', idx === activeTabIndex));
 
     if (wheelHint && !wheelHint.classList.contains('dismissed')) {
       wheelHint.classList.add('dismissed');
     }
-
-    if (activeTabIndex === 1) {
-      resizeDinoCanvas();
-    }
-
-    if (typeof onTabSwitchedEffect === 'function') {
-      onTabSwitchedEffect(activeTabIndex);
-    }
+    if (activeTabIndex === 1) resizeDinoCanvas();
+    if (typeof onTabSwitchedEffect === 'function') onTabSwitchedEffect(activeTabIndex);
   }
 
   tabDots.forEach((dot) => {
     dot.addEventListener('click', () => {
-      const targetIdx = parseInt(dot.getAttribute('data-tab') || '0', 10);
-      switchTab(targetIdx);
+      switchTab(parseInt(dot.getAttribute('data-tab') || '0', 10));
     });
   });
 
   window.addEventListener('wheel', (e) => {
-    if (!isEntered) return;
-    if (Math.abs(e.deltaY) < 12) return;
-
+    if (!isEntered || Math.abs(e.deltaY) < 12) return;
     const now = Date.now();
     if (now - lastWheelSwitchTime < 460) return;
     lastWheelSwitchTime = now;
-
-    if (e.deltaY > 0) {
-      switchTab(activeTabIndex + 1);
-    } else {
-      switchTab(activeTabIndex - 1);
-    }
+    switchTab(e.deltaY > 0 ? activeTabIndex + 1 : activeTabIndex - 1);
   }, { passive: true });
 
   let touchStartY = null;
   window.addEventListener('touchstart', (e) => {
-    if (e.touches.length === 1) {
-      touchStartY = e.touches[0].clientY;
-    }
+    if (e.touches.length === 1) touchStartY = e.touches[0].clientY;
   }, { passive: true });
 
   window.addEventListener('touchend', (e) => {
     if (!isEntered || touchStartY === null || e.changedTouches.length === 0) return;
     const diffY = touchStartY - e.changedTouches[0].clientY;
     touchStartY = null;
-    if (Math.abs(diffY) > 55) {
-      switchTab(diffY > 0 ? activeTabIndex + 1 : activeTabIndex - 1);
-    }
+    if (Math.abs(diffY) > 55) switchTab(diffY > 0 ? activeTabIndex + 1 : activeTabIndex - 1);
   }, { passive: true });
 
-  // 1.6. Улучшенная мини-игра "Динозаврик" (классические зелёные кактусы, приседание, птицы, день/ночь, ретро-звуки)
+  // Мини-игра Dino Run
   const dinoStage = document.getElementById('dino-stage');
   const dinoCanvas = document.getElementById('dino-canvas');
   const dinoCtx = dinoCanvas.getContext('2d');
@@ -599,7 +489,6 @@ document.addEventListener('DOMContentLoaded', () => {
     dinoCanvas.height = Math.floor(dinoH * dpr);
     dinoCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
-
   resizeDinoCanvas();
   window.addEventListener('resize', resizeDinoCanvas);
 
@@ -610,41 +499,30 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!AudioContextClass) return;
       if (!sfxCtx) sfxCtx = new AudioContextClass();
       if (sfxCtx.state === 'suspended') sfxCtx.resume().catch(() => {});
-
       const osc = sfxCtx.createOscillator();
       const gain = sfxCtx.createGain();
-      osc.type = 'square';
+      osc.type = type === 'hit' ? 'sawtooth' : 'square';
       const now = sfxCtx.currentTime;
-
       if (type === 'jump') {
         osc.frequency.setValueAtTime(280, now);
         osc.frequency.exponentialRampToValueAtTime(560, now + 0.09);
         gain.gain.setValueAtTime(0.035, now);
         gain.gain.exponentialRampToValueAtTime(0.001, now + 0.095);
-        osc.connect(gain);
-        gain.connect(sfxCtx.destination);
-        osc.start(now);
-        osc.stop(now + 0.1);
       } else if (type === 'milestone') {
         osc.frequency.setValueAtTime(587, now);
         osc.frequency.setValueAtTime(880, now + 0.07);
         gain.gain.setValueAtTime(0.03, now);
         gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
-        osc.connect(gain);
-        gain.connect(sfxCtx.destination);
-        osc.start(now);
-        osc.stop(now + 0.19);
-      } else if (type === 'hit') {
-        osc.type = 'sawtooth';
+      } else {
         osc.frequency.setValueAtTime(190, now);
         osc.frequency.exponentialRampToValueAtTime(65, now + 0.22);
         gain.gain.setValueAtTime(0.045, now);
         gain.gain.exponentialRampToValueAtTime(0.001, now + 0.23);
-        osc.connect(gain);
-        gain.connect(sfxCtx.destination);
-        osc.start(now);
-        osc.stop(now + 0.24);
       }
+      osc.connect(gain);
+      gain.connect(sfxCtx.destination);
+      osc.start(now);
+      osc.stop(now + 0.24);
     } catch (_) {}
   }
 
@@ -664,15 +542,7 @@ document.addEventListener('DOMContentLoaded', () => {
     groundScroll: 0,
     nextSpawnFrames: 60,
     nightFactor: 0,
-    player: {
-      x: 42,
-      y: 0,
-      w: 22,
-      h: 26,
-      vy: 0,
-      grounded: true,
-      ducking: false
-    },
+    player: { x: 42, y: 0, w: 22, h: 26, vy: 0, grounded: true, ducking: false },
     obstacles: [],
     dust: []
   };
@@ -726,10 +596,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function setDinoDuck(isDucking) {
     if (!dinoState.running || dinoState.gameOver) return;
-    const p = dinoState.player;
-    p.ducking = isDucking;
-    if (!p.grounded && isDucking) {
-      p.vy = Math.max(p.vy, 7.5);
+    dinoState.player.ducking = isDucking;
+    if (!dinoState.player.grounded && isDucking) {
+      dinoState.player.vy = Math.max(dinoState.player.vy, 7.5);
     }
   }
 
@@ -742,30 +611,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (e.pointerType === 'touch' || e.pointerType === 'pen') {
       clearTimeout(dinoTouchHoldTimer);
-      dinoTouchHoldTimer = setTimeout(() => {
-        setDinoDuck(true);
-      }, 170);
+      dinoTouchHoldTimer = setTimeout(() => setDinoDuck(true), 170);
     }
     triggerDinoJump();
   });
 
-  dinoStage.addEventListener('pointerup', () => {
-    clearTimeout(dinoTouchHoldTimer);
-    setDinoDuck(false);
-  });
-
-  dinoStage.addEventListener('pointercancel', () => {
-    clearTimeout(dinoTouchHoldTimer);
-    setDinoDuck(false);
-  });
+  dinoStage.addEventListener('pointerup', () => { clearTimeout(dinoTouchHoldTimer); setDinoDuck(false); });
+  dinoStage.addEventListener('pointercancel', () => { clearTimeout(dinoTouchHoldTimer); setDinoDuck(false); });
 
   window.addEventListener('keydown', (e) => {
     if (e.code === 'KeyQ' || e.key === 'q' || e.key === 'Q' || e.key === 'й' || e.key === 'Й') {
-      if (blizzardTargetIntensity > 0 || blizzardCurrentIntensity > 0.05) {
-        stopBlizzard();
-      }
+      if (blizzardTargetIntensity > 0 || blizzardCurrentIntensity > 0.05) stopBlizzard();
     }
-
     if (e.key && e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
       typedSecretBuffer = (typedSecretBuffer + e.key.toLowerCase()).slice(-8);
       if (typedSecretBuffer.endsWith('hack')) {
@@ -773,7 +630,6 @@ document.addEventListener('DOMContentLoaded', () => {
         triggerHackerEasterEgg(4200);
       }
     }
-
     if (activeTabIndex !== 1) return;
     if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') {
       e.preventDefault();
@@ -785,24 +641,19 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   window.addEventListener('keyup', (e) => {
-    if (e.code === 'ArrowDown' || e.code === 'KeyS') {
-      setDinoDuck(false);
-    }
+    if (e.code === 'ArrowDown' || e.code === 'KeyS') setDinoDuck(false);
   });
 
   function drawDinoCharacter(p, timeMs) {
     dinoCtx.save();
     dinoCtx.fillStyle = '#f3f4f6';
-
     if (p.ducking && p.grounded) {
       dinoCtx.beginPath();
       dinoCtx.roundRect(p.x - 4, p.y + 4, p.w + 7, 11, 4);
       dinoCtx.roundRect(p.x + p.w - 2, p.y + 3, 11, 9, 3);
       dinoCtx.fill();
-
       dinoCtx.fillStyle = '#09090b';
       dinoCtx.fillRect(p.x + p.w + 4, p.y + 5, 2.2, 2.2);
-
       dinoCtx.fillStyle = '#d1d5db';
       const step = dinoState.running ? Math.sin(timeMs * 0.03) * 2.2 : 0;
       dinoCtx.fillRect(p.x + 2, p.y + 14 + step, 4, 4 - step);
@@ -813,10 +664,8 @@ document.addEventListener('DOMContentLoaded', () => {
       dinoCtx.roundRect(p.x + 7, p.y, p.w - 7, 12, 4);
       dinoCtx.roundRect(p.x - 5, p.y + 11, 7, 6, 2);
       dinoCtx.fill();
-
       dinoCtx.fillStyle = '#09090b';
       dinoCtx.fillRect(p.x + p.w - 6, p.y + 3, 2.5, 2.5);
-
       dinoCtx.fillStyle = '#d1d5db';
       const step = dinoState.running && p.grounded ? Math.sin(timeMs * 0.026) * 2.5 : 0;
       dinoCtx.fillRect(p.x + 3, p.y + p.h - 5 + step, 4, 5 - step);
@@ -830,10 +679,8 @@ document.addEventListener('DOMContentLoaded', () => {
     dinoCtx.fillStyle = '#2e8b57';
     dinoCtx.strokeStyle = '#1f633d';
     dinoCtx.lineWidth = 1;
-
     const trunkW = Math.max(6, c.w * 0.44);
     const trunkX = c.x + (c.w - trunkW) / 2;
-
     dinoCtx.beginPath();
     dinoCtx.roundRect(trunkX, c.y, trunkW, c.h, 3);
     dinoCtx.roundRect(c.x, c.y + c.h * 0.30, trunkX - c.x + 2, 4, 2);
@@ -842,9 +689,6 @@ document.addEventListener('DOMContentLoaded', () => {
     dinoCtx.roundRect(c.x + c.w - 4, c.y + c.h * 0.24, 4, c.h * 0.22, 2);
     dinoCtx.fill();
     dinoCtx.stroke();
-
-    dinoCtx.fillStyle = '#3ca368';
-    dinoCtx.fillRect(trunkX + 1.5, c.y + 3, 1.5, c.h - 6);
     dinoCtx.restore();
   }
 
@@ -852,19 +696,9 @@ document.addEventListener('DOMContentLoaded', () => {
     dinoCtx.save();
     const flap = Math.sin(timeMs * 0.022 + b.phase) > 0;
     dinoCtx.fillStyle = '#9ca3af';
-
     dinoCtx.beginPath();
     dinoCtx.roundRect(b.x + 4, b.y + 6, b.w - 8, 7, 3);
     dinoCtx.fill();
-
-    dinoCtx.fillStyle = '#d1d5db';
-    dinoCtx.beginPath();
-    dinoCtx.moveTo(b.x + 4, b.y + 8);
-    dinoCtx.lineTo(b.x - 2, b.y + 10);
-    dinoCtx.lineTo(b.x + 4, b.y + 11);
-    dinoCtx.closePath();
-    dinoCtx.fill();
-
     dinoCtx.fillStyle = '#e5e7eb';
     dinoCtx.beginPath();
     if (flap) {
@@ -884,7 +718,6 @@ document.addEventListener('DOMContentLoaded', () => {
   function stepAndRenderDino(timeMs) {
     dinoCtx.clearRect(0, 0, dinoW, dinoH);
     const groundY = dinoH - GROUND_OFFSET;
-
     const isNightTarget = Math.floor(dinoState.score / 250) % 2 === 1 ? 1 : 0;
     dinoState.nightFactor += (isNightTarget - dinoState.nightFactor) * 0.03;
 
@@ -892,12 +725,10 @@ document.addEventListener('DOMContentLoaded', () => {
       dinoCtx.save();
       dinoCtx.fillStyle = `rgba(15, 23, 42, ${dinoState.nightFactor * 0.48})`;
       dinoCtx.fillRect(0, 0, dinoW, dinoH);
-
       dinoCtx.fillStyle = `rgba(241, 245, 249, ${dinoState.nightFactor * 0.78})`;
       dinoCtx.beginPath();
       dinoCtx.arc(dinoW - 44, 28, 8, 0, Math.PI * 2);
       dinoCtx.fill();
-
       for (let i = 0; i < dinoStars.length; i++) {
         const st = dinoStars[i];
         const twinkle = 0.5 + 0.5 * Math.sin(timeMs * 0.005 + st.phase);
@@ -908,12 +739,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const p = dinoState.player;
-    const activePlayerH = p.ducking && p.grounded ? 16 : 26;
-    p.h = activePlayerH;
-
-    if (!dinoState.running && !dinoState.gameOver) {
-      p.y = groundY - p.h;
-    }
+    p.h = p.ducking && p.grounded ? 16 : 26;
+    if (!dinoState.running && !dinoState.gameOver) p.y = groundY - p.h;
 
     dinoCtx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
     dinoCtx.lineWidth = 1.5;
@@ -928,51 +755,39 @@ document.addEventListener('DOMContentLoaded', () => {
     dinoCtx.fillStyle = 'rgba(255, 255, 255, 0.16)';
     for (let gx = -dinoState.groundScroll; gx < dinoW; gx += 28) {
       dinoCtx.fillRect(gx, groundY + 6, 10, 2);
-      dinoCtx.fillRect(gx + 16, groundY + 11, 4, 1.5);
     }
 
     if (dinoState.running && !dinoState.gameOver) {
       const wasAirborne = !p.grounded;
       p.vy += 0.45;
       p.y += p.vy;
-
       if (p.y >= groundY - p.h) {
         p.y = groundY - p.h;
         p.vy = 0;
         p.grounded = true;
-        if (wasAirborne) {
-          spawnDinoDust(p.x + 6, groundY, 5);
-        }
-      }
-
-      if (p.grounded && Math.random() < 0.22) {
-        spawnDinoDust(p.x + 2, groundY, 1);
+        if (wasAirborne) spawnDinoDust(p.x + 6, groundY, 5);
       }
 
       dinoState.nextSpawnFrames -= 1;
       if (dinoState.nextSpawnFrames <= 0) {
         const canSpawnBird = dinoState.score >= 120 && Math.random() < 0.3;
         if (canSpawnBird) {
-          const flyHigh = Math.random() < 0.55;
-          const birdH = 18;
-          const birdY = flyHigh ? groundY - 34 : groundY - 21;
           dinoState.obstacles.push({
             kind: 'bird',
             x: dinoW + 14,
-            y: birdY,
+            y: Math.random() < 0.55 ? groundY - 34 : groundY - 21,
             w: 24,
-            h: birdH,
+            h: 18,
             phase: Math.random() * Math.PI * 2
           });
         } else {
-          const isDoubleCactus = dinoState.score >= 80 && Math.random() < 0.28;
+          const isDouble = dinoState.score >= 80 && Math.random() < 0.28;
           const h = 22 + Math.floor(Math.random() * 13);
-          const w = isDoubleCactus ? 25 : (14 + Math.floor(Math.random() * 6));
           dinoState.obstacles.push({
             kind: 'cactus',
             x: dinoW + 12,
             y: groundY - h,
-            w,
+            w: isDouble ? 25 : (14 + Math.floor(Math.random() * 6)),
             h
           });
         }
@@ -982,13 +797,14 @@ document.addEventListener('DOMContentLoaded', () => {
       for (let i = dinoState.obstacles.length - 1; i >= 0; i--) {
         const ob = dinoState.obstacles[i];
         ob.x -= ob.kind === 'bird' ? dinoState.speed * 1.12 : dinoState.speed;
-
         const pad = 4;
         const playerRight = p.ducking && p.grounded ? p.x + p.w + 5 : p.x + p.w;
-        const hitX = p.x + pad < ob.x + ob.w - pad && playerRight - pad > ob.x + pad;
-        const hitY = p.y + pad < ob.y + ob.h - pad && p.y + p.h - pad > ob.y + pad;
-
-        if (hitX && hitY) {
+        if (
+          p.x + pad < ob.x + ob.w - pad &&
+          playerRight - pad > ob.x + pad &&
+          p.y + pad < ob.y + ob.h - pad &&
+          p.y + p.h - pad > ob.y + pad
+        ) {
           dinoState.gameOver = true;
           dinoState.running = false;
           playDinoSound('hit');
@@ -999,15 +815,10 @@ document.addEventListener('DOMContentLoaded', () => {
             dinoBestEl.textContent = String(dinoBest).padStart(4, '0');
           }
           dinoMsgTitle.textContent = `Игра окончена · Счёт: ${finalScore}`;
-          dinoMsgSub.textContent = isMobileDevice
-            ? 'Тапни по экрану, чтобы сыграть снова'
-            : 'Нажми Space или кликни, чтобы сыграть снова';
+          dinoMsgSub.textContent = isMobileDevice ? 'Тапни по экрану, чтобы сыграть снова' : 'Нажми Space или кликни, чтобы сыграть снова';
           dinoOverlayMsg.classList.remove('hidden-msg');
         }
-
-        if (ob.x + ob.w < -15) {
-          dinoState.obstacles.splice(i, 1);
-        }
+        if (ob.x + ob.w < -15) dinoState.obstacles.splice(i, 1);
       }
 
       dinoState.score += 0.17;
@@ -1016,7 +827,6 @@ document.addEventListener('DOMContentLoaded', () => {
         dinoState.lastMilestone = wholeScore;
         playDinoSound('milestone');
       }
-
       dinoState.speed = Math.min(9.2, 4.5 + dinoState.score * 0.0048);
       dinoScoreEl.textContent = String(wholeScore).padStart(4, '0');
     }
@@ -1026,9 +836,8 @@ document.addEventListener('DOMContentLoaded', () => {
       d.x += d.vx;
       d.y += d.vy;
       d.alpha -= 0.04;
-      if (d.alpha <= 0) {
-        dinoState.dust.splice(i, 1);
-      } else {
+      if (d.alpha <= 0) dinoState.dust.splice(i, 1);
+      else {
         dinoCtx.fillStyle = `rgba(229, 231, 235, ${d.alpha})`;
         dinoCtx.fillRect(d.x, d.y, d.size, d.size);
       }
@@ -1036,23 +845,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
     for (let i = 0; i < dinoState.obstacles.length; i++) {
       const ob = dinoState.obstacles[i];
-      if (ob.kind === 'bird') {
-        drawBird(ob, timeMs);
-      } else {
-        drawCactus(ob);
-      }
+      if (ob.kind === 'bird') drawBird(ob, timeMs);
+      else drawCactus(ob);
     }
     drawDinoCharacter(p, timeMs);
   }
 
-  // 1.7. Сбоящий виниловый диск на 3-й вкладке (крутится, моментами зависает и сбоит)
+  // Сбоящий виниловый диск на 3-й вкладке
   const lofiCard = document.querySelector('.lofi-card');
   const vinylDisc = document.getElementById('vinyl-disc');
   const discStatusLabel = document.getElementById('disc-status-label');
-
   let discAngle = 0;
   let lastDiscFrameMs = null;
-  let glitchState = 'none'; // 'none' | 'stall' | 'rewind' | 'jitter'
+  let glitchState = 'none';
   let glitchUntilMs = 0;
   let nextGlitchCheckMs = 0;
 
@@ -1065,31 +870,29 @@ document.addEventListener('DOMContentLoaded', () => {
     if (timeMs >= nextGlitchCheckMs) {
       if (glitchState === 'none') {
         const roll = Math.random();
-        if (roll < 0.22) {
+        if (roll < 0.24) {
           glitchState = 'stall';
           glitchUntilMs = timeMs + 260 + Math.random() * 520;
           if (discStatusLabel) discStatusLabel.textContent = 'GLITCH · STALL';
-        } else if (roll < 0.36) {
+        } else if (roll < 0.38) {
           glitchState = 'rewind';
           glitchUntilMs = timeMs + 180 + Math.random() * 240;
           if (discStatusLabel) discStatusLabel.textContent = 'GLITCH · SKIP BACK';
-        } else if (roll < 0.48) {
+        } else if (roll < 0.50) {
           glitchState = 'jitter';
           glitchUntilMs = timeMs + 220 + Math.random() * 320;
           if (discStatusLabel) discStatusLabel.textContent = 'GLITCH · WOBBLE';
         } else {
-          nextGlitchCheckMs = timeMs + 1100 + Math.random() * 1700;
+          nextGlitchCheckMs = timeMs + 1000 + Math.random() * 1600;
         }
       } else if (timeMs >= glitchUntilMs) {
         glitchState = 'none';
-        nextGlitchCheckMs = timeMs + 1400 + Math.random() * 2200;
+        nextGlitchCheckMs = timeMs + 1200 + Math.random() * 2000;
         if (discStatusLabel) discStatusLabel.textContent = 'SPINNING · LO-FI';
       }
     }
 
-    if (lofiCard) {
-      lofiCard.classList.toggle('is-glitching', glitchState !== 'none');
-    }
+    if (lofiCard) lofiCard.classList.toggle('is-glitching', glitchState !== 'none');
 
     let offsetX = 0;
     let offsetY = 0;
@@ -1098,27 +901,23 @@ document.addEventListener('DOMContentLoaded', () => {
     if (glitchState === 'none') {
       discAngle = (discAngle + dt * 135) % 360;
     } else if (glitchState === 'stall') {
-      // Диск почти зависает с лёгким микро-дрожанием иглы
       discAngle = (discAngle + dt * 6) % 360;
       offsetX = (Math.random() - 0.5) * 2.2;
       offsetY = (Math.random() - 0.5) * 2.2;
     } else if (glitchState === 'rewind') {
-      // Сбой со скачком назад
       discAngle = (discAngle - dt * 290 + 360) % 360;
       offsetX = (Math.random() - 0.5) * 3.5;
       scale = 0.985;
     } else if (glitchState === 'jitter') {
-      // Рваный сбой скорости
       discAngle = (discAngle + dt * (Math.random() < 0.5 ? 360 : 25)) % 360;
       offsetX = (Math.random() - 0.5) * 3;
       offsetY = (Math.random() - 0.5) * 2.5;
     }
 
-    vinylDisc.style.transform =
-      `translate3d(${offsetX.toFixed(1)}px, ${offsetY.toFixed(1)}px, 0) scale(${scale}) rotate(${discAngle.toFixed(1)}deg)`;
+    vinylDisc.style.transform = `translate3d(${offsetX.toFixed(1)}px, ${offsetY.toFixed(1)}px, 0) scale(${scale}) rotate(${discAngle.toFixed(1)}deg)`;
   }
 
-  // 2. Плавное перемещение проигрывателя по экрану с интерполяцией
+  // Перетаскивание проигрывателя
   let isPlayerDragging = false;
   let playerDragOffsetX = 0;
   let playerDragOffsetY = 0;
@@ -1131,28 +930,15 @@ document.addEventListener('DOMContentLoaded', () => {
   function clampPlayerPosition(x, y) {
     const rect = topPlayer.getBoundingClientRect();
     const margin = 10;
-    const maxX = Math.max(margin, window.innerWidth - rect.width - margin);
-    const maxY = Math.max(margin, window.innerHeight - rect.height - margin);
     return {
-      x: Math.max(margin, Math.min(x, maxX)),
-      y: Math.max(margin, Math.min(y, maxY))
+      x: Math.max(margin, Math.min(x, Math.max(margin, window.innerWidth - rect.width - margin))),
+      y: Math.max(margin, Math.min(y, Math.max(margin, window.innerHeight - rect.height - margin)))
     };
   }
 
-  function shouldIgnorePlayerDrag(target) {
-    return Boolean(
-      target.closest('button') ||
-      target.closest('input') ||
-      target.closest('.progress-track-wrap') ||
-      target.closest('.volume-drawer')
-    );
-  }
-
   topPlayer.addEventListener('pointerdown', (e) => {
-    if (isMobileDevice) return;
-    if (shouldIgnorePlayerDrag(e.target)) return;
+    if (isMobileDevice || e.target.closest('button, input, .progress-track-wrap, .volume-drawer')) return;
     if (e.button !== undefined && e.button !== 0 && e.pointerType === 'mouse') return;
-
     const rect = topPlayer.getBoundingClientRect();
     if (!playerPosInitialized) {
       currentPlayerX = rect.left;
@@ -1161,7 +947,6 @@ document.addEventListener('DOMContentLoaded', () => {
       targetPlayerY = rect.top;
       playerPosInitialized = true;
     }
-
     isPlayerDragging = true;
     playerDragOffsetX = e.clientX - currentPlayerX;
     playerDragOffsetY = e.clientY - currentPlayerY;
@@ -1171,10 +956,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   topPlayer.addEventListener('pointermove', (e) => {
     if (!isPlayerDragging) return;
-    const clamped = clampPlayerPosition(
-      e.clientX - playerDragOffsetX,
-      e.clientY - playerDragOffsetY
-    );
+    const clamped = clampPlayerPosition(e.clientX - playerDragOffsetX, e.clientY - playerDragOffsetY);
     targetPlayerX = clamped.x;
     targetPlayerY = clamped.y;
   });
@@ -1183,22 +965,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!isPlayerDragging) return;
     isPlayerDragging = false;
     topPlayer.classList.remove('dragging');
-    if (topPlayer.hasPointerCapture(e.pointerId)) {
-      topPlayer.releasePointerCapture(e.pointerId);
-    }
+    if (topPlayer.hasPointerCapture(e.pointerId)) topPlayer.releasePointerCapture(e.pointerId);
   }
-
   topPlayer.addEventListener('pointerup', stopPlayerDrag);
   topPlayer.addEventListener('pointercancel', stopPlayerDrag);
 
-  window.addEventListener('resize', () => {
-    if (!playerPosInitialized) return;
-    const clamped = clampPlayerPosition(targetPlayerX, targetPlayerY);
-    targetPlayerX = clamped.x;
-    targetPlayerY = clamped.y;
-  });
-
-  // 3. CAVA-полоски рядом с названием трека
+  // CAVA эквалайзер
   const cavaCanvas = document.getElementById('cava-canvas');
   const cavaCtx = cavaCanvas.getContext('2d');
   const CAVA_BARS = 8;
@@ -1208,26 +980,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const w = cavaCanvas.width;
     const h = cavaCanvas.height;
     cavaCtx.clearRect(0, 0, w, h);
-
     const isPlaying = !audio.paused && !audio.muted && audio.volume > 0.01;
     let hasRealAudio = false;
-
     if (analyser && freqData && isPlaying) {
       analyser.getByteFrequencyData(freqData);
       for (let i = 0; i < freqData.length; i++) {
-        if (freqData[i] > 6) {
-          hasRealAudio = true;
-          break;
-        }
+        if (freqData[i] > 6) { hasRealAudio = true; break; }
       }
     }
-
     const gap = 2;
     const barWidth = Math.max(2, (w - gap * (CAVA_BARS - 1)) / CAVA_BARS);
-
     for (let i = 0; i < CAVA_BARS; i++) {
       let targetLevel = 0.14;
-
       if (isPlaying) {
         if (hasRealAudio && freqData) {
           const binIndex = Math.min(freqData.length - 1, Math.floor((i / CAVA_BARS) * 18) + 1);
@@ -1238,18 +1002,14 @@ document.addEventListener('DOMContentLoaded', () => {
           targetLevel = Math.max(0.18, Math.min(0.96, wave1 * 0.62 + wave2 * 0.34));
         }
       }
-
       cavaLevels[i] += (targetLevel - cavaLevels[i]) * (isPlaying ? 0.26 : 0.14);
-
       const barHeight = Math.max(3, cavaLevels[i] * (h - 2));
       const x = i * (barWidth + gap);
       const y = h - barHeight;
-
       const grad = cavaCtx.createLinearGradient(0, y, 0, h);
       grad.addColorStop(0, '#38bdf8');
       grad.addColorStop(0.55, '#818cf8');
       grad.addColorStop(1, '#f472b6');
-
       cavaCtx.fillStyle = grad;
       cavaCtx.beginPath();
       cavaCtx.roundRect(x, y, barWidth, barHeight, 2);
@@ -1257,42 +1017,27 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // 4. Логика проигрывателя и громкости
+  // Управление аудио и ползунками
   function formatTime(sec) {
     if (!Number.isFinite(sec) || sec < 0) return '00:00';
-    const mins = Math.floor(sec / 60);
-    const secs = Math.floor(sec % 60);
-    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    return `${String(Math.floor(sec / 60)).padStart(2, '0')}:${String(Math.floor(sec % 60)).padStart(2, '0')}`;
   }
 
   function syncPlayState() {
-    if (audio.paused) {
-      topPlayer.classList.remove('playing');
-      iconPlay.classList.remove('hidden-icon');
-      iconPause.classList.add('hidden-icon');
-    } else {
-      topPlayer.classList.add('playing');
-      iconPlay.classList.add('hidden-icon');
-      iconPause.classList.remove('hidden-icon');
-    }
+    iconPlay.classList.toggle('hidden-icon', !audio.paused);
+    iconPause.classList.toggle('hidden-icon', audio.paused);
   }
 
   function syncMuteState() {
     const isMutedNow = audio.muted || audio.volume <= 0.025;
-    if (isMutedNow) {
-      iconSoundOn.classList.add('hidden-icon');
-      iconSoundOff.classList.remove('hidden-icon');
-    } else {
-      iconSoundOn.classList.remove('hidden-icon');
-      iconSoundOff.classList.add('hidden-icon');
-    }
+    iconSoundOn.classList.toggle('hidden-icon', isMutedNow);
+    iconSoundOff.classList.toggle('hidden-icon', !isMutedNow);
   }
 
   function applyVolumeValue(val) {
     const clamped = Math.max(0, Math.min(1, val));
     targetVolumePercent = clamped * 100;
     volumeSlider.value = clamped;
-
     if (clamped <= 0.025) {
       audio.volume = 0;
       audio.muted = true;
@@ -1306,115 +1051,72 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   let volumeCloseTimer = null;
-
+  let isVolumeDragging = false;
   function openVolumeDrawer() {
     clearTimeout(volumeCloseTimer);
     volumeControl.classList.add('open');
     resizeVolCanvas();
   }
-
   function scheduleCloseVolumeDrawer() {
     clearTimeout(volumeCloseTimer);
-    volumeCloseTimer = setTimeout(() => {
-      if (!isVolumeDragging) {
-        volumeControl.classList.remove('open');
-      }
-    }, 340);
+    volumeCloseTimer = setTimeout(() => { if (!isVolumeDragging) volumeControl.classList.remove('open'); }, 340);
   }
-
   volumeControl.addEventListener('mouseenter', openVolumeDrawer);
   volumeControl.addEventListener('mouseleave', scheduleCloseVolumeDrawer);
 
   playPauseBtn.addEventListener('click', () => {
     initAudioAnalyser();
-    if (audio.paused) {
-      audio.play().catch(() => {});
-    } else {
-      audio.pause();
-    }
+    if (audio.paused) audio.play().catch(() => {});
+    else audio.pause();
   });
 
   muteBtn.addEventListener('click', () => {
     if (!isMobileDevice) openVolumeDrawer();
-    if (audio.muted || audio.volume <= 0.025) {
-      const restoreVal = lastNonZeroVolume > 0.05 ? lastNonZeroVolume : 0.75;
-      applyVolumeValue(restoreVal);
-    } else {
-      lastNonZeroVolume = audio.volume;
-      applyVolumeValue(0);
-    }
+    if (audio.muted || audio.volume <= 0.025) applyVolumeValue(lastNonZeroVolume > 0.05 ? lastNonZeroVolume : 0.75);
+    else { lastNonZeroVolume = audio.volume; applyVolumeValue(0); }
   });
 
-  let isVolumeDragging = false;
-
-  function setVolumeFromClientX(clientX) {
-    const rect = volumeSlider.getBoundingClientRect();
-    if (rect.width <= 0) return;
-    const ratio = (clientX - rect.left) / rect.width;
-    applyVolumeValue(ratio);
-  }
-
-  volumeSlider.addEventListener('input', () => {
-    openVolumeDrawer();
-    applyVolumeValue(parseFloat(volumeSlider.value));
-  });
-
+  volumeSlider.addEventListener('input', () => { openVolumeDrawer(); applyVolumeValue(parseFloat(volumeSlider.value)); });
   volumeSlider.addEventListener('pointerdown', (e) => {
     isVolumeDragging = true;
     openVolumeDrawer();
     volumeSlider.setPointerCapture(e.pointerId);
-    setVolumeFromClientX(e.clientX);
+    const rect = volumeSlider.getBoundingClientRect();
+    if (rect.width > 0) applyVolumeValue((e.clientX - rect.left) / rect.width);
   });
-
   volumeSlider.addEventListener('pointermove', (e) => {
     if (!isVolumeDragging) return;
-    setVolumeFromClientX(e.clientX);
-    spawnVolumeBurst(2);
+    const rect = volumeSlider.getBoundingClientRect();
+    if (rect.width > 0) applyVolumeValue((e.clientX - rect.left) / rect.width);
   });
-
   function stopVolumeDrag(e) {
     if (!isVolumeDragging) return;
     isVolumeDragging = false;
-    if (volumeSlider.hasPointerCapture(e.pointerId)) {
-      volumeSlider.releasePointerCapture(e.pointerId);
-    }
+    if (volumeSlider.hasPointerCapture(e.pointerId)) volumeSlider.releasePointerCapture(e.pointerId);
     scheduleCloseVolumeDrawer();
   }
-
   volumeSlider.addEventListener('pointerup', stopVolumeDrag);
   volumeSlider.addEventListener('pointercancel', stopVolumeDrag);
 
   audio.addEventListener('play', syncPlayState);
   audio.addEventListener('pause', syncPlayState);
-  audio.addEventListener('ended', () => {
-    audio.currentTime = 0;
-    targetProgressPercent = 0;
-    syncPlayState();
-  });
+  audio.addEventListener('ended', () => { audio.currentTime = 0; targetProgressPercent = 0; syncPlayState(); });
+  audio.addEventListener('loadedmetadata', () => { durationTimeEl.textContent = formatTime(audio.duration); });
 
-  audio.addEventListener('loadedmetadata', () => {
-    durationTimeEl.textContent = formatTime(audio.duration);
-  });
-
-  // 5. Плавное перетаскивание ползунка трека
   let isScrubbing = false;
-
   function setSeekFromClientX(clientX, immediateVisual = false) {
     const rect = seekSlider.getBoundingClientRect();
     if (rect.width <= 0) return;
-    const ratio = (clientX - rect.left) / rect.width;
-    const pct = Math.max(0, Math.min(100, ratio * 100));
+    const pct = Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100));
     targetProgressPercent = pct;
     if (immediateVisual) {
       smoothProgressPercent = pct;
       progressFill.style.width = `${pct.toFixed(3)}%`;
     }
     seekSlider.value = pct;
-
     if (Number.isFinite(audio.duration) && audio.duration > 0) {
-      const targetTime = (pct / 100) * audio.duration;
-      audio.currentTime = targetTime;
-      currentTimeEl.textContent = formatTime(targetTime);
+      audio.currentTime = (pct / 100) * audio.duration;
+      currentTimeEl.textContent = formatTime(audio.currentTime);
     }
   }
 
@@ -1428,17 +1130,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  seekSlider.addEventListener('input', () => {
-    const pct = parseFloat(seekSlider.value);
-    targetProgressPercent = pct;
-    smoothProgressPercent = pct;
-    progressFill.style.width = `${pct.toFixed(3)}%`;
-    if (Number.isFinite(audio.duration) && audio.duration > 0) {
-      audio.currentTime = (pct / 100) * audio.duration;
-      currentTimeEl.textContent = formatTime(audio.currentTime);
-    }
-  });
-
   seekSlider.addEventListener('pointerdown', (e) => {
     e.stopPropagation();
     isScrubbing = true;
@@ -1447,56 +1138,41 @@ document.addEventListener('DOMContentLoaded', () => {
     setSeekFromClientX(e.clientX, true);
     spawnProgressParticles(7, true);
   });
-
   seekSlider.addEventListener('pointermove', (e) => {
     if (!isScrubbing) return;
     e.stopPropagation();
     setSeekFromClientX(e.clientX, true);
     spawnProgressParticles(6, true);
   });
-
   function endScrub(e) {
     if (!isScrubbing) return;
     isScrubbing = false;
     progressTrackWrap.classList.remove('scrubbing');
-    if (seekSlider.hasPointerCapture(e.pointerId)) {
-      seekSlider.releasePointerCapture(e.pointerId);
-    }
+    if (seekSlider.hasPointerCapture(e.pointerId)) seekSlider.releasePointerCapture(e.pointerId);
   }
-
   seekSlider.addEventListener('pointerup', endScrub);
   seekSlider.addEventListener('pointercancel', endScrub);
 
-  // 6. 3D-наклон полупрозрачных кнопок за курсором мыши (на ПК)
-  const tiltButtons = document.querySelectorAll('.tilt-btn');
-  tiltButtons.forEach((btn) => {
+  // 3D-наклон кнопок
+  document.querySelectorAll('.tilt-btn').forEach((btn) => {
     btn.addEventListener('mousemove', (e) => {
       if (isMobileDevice) return;
       const rect = btn.getBoundingClientRect();
-      const relX = (e.clientX - rect.left) / rect.width - 0.5;
-      const relY = (e.clientY - rect.top) / rect.height - 0.5;
-      const rotateY = relX * 14;
-      const rotateX = -relY * 14;
-
-      btn.classList.add('is-tilting');
-      btn.style.setProperty('--rx', `${rotateX.toFixed(2)}deg`);
-      btn.style.setProperty('--ry', `${rotateY.toFixed(2)}deg`);
+      btn.style.setProperty('--rx', `${(-((e.clientY - rect.top) / rect.height - 0.5) * 14).toFixed(2)}deg`);
+      btn.style.setProperty('--ry', `${(((e.clientX - rect.left) / rect.width - 0.5) * 14).toFixed(2)}deg`);
       btn.style.setProperty('--ty', '-3px');
     });
-
     btn.addEventListener('mouseleave', () => {
-      btn.classList.remove('is-tilting');
       btn.style.setProperty('--rx', '0deg');
       btn.style.setProperty('--ry', '0deg');
       btn.style.setProperty('--ty', '0px');
     });
   });
 
-  // 7. Частицы у ползунка прогресса и громкости
+  // Частицы ползунков
   const pCanvas = document.getElementById('progress-particles');
   const pCtx = pCanvas.getContext('2d');
   const barParticles = [];
-
   const vCanvas = document.getElementById('volume-particles');
   const vCtx = vCanvas.getContext('2d');
   const volParticles = [];
@@ -1508,7 +1184,6 @@ document.addEventListener('DOMContentLoaded', () => {
     pCanvas.height = Math.max(1, Math.floor(rect.height * dpr));
     pCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
-
   function resizeVolCanvas() {
     const rect = vCanvas.getBoundingClientRect();
     const dpr = window.devicePixelRatio || 1;
@@ -1516,100 +1191,49 @@ document.addEventListener('DOMContentLoaded', () => {
     vCanvas.height = Math.max(1, Math.floor(rect.height * dpr));
     vCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
-
   resizeBarCanvas();
   resizeVolCanvas();
-  window.addEventListener('resize', () => {
-    resizeBarCanvas();
-    resizeVolCanvas();
-  });
+  window.addEventListener('resize', () => { resizeBarCanvas(); resizeVolCanvas(); });
 
-  const particlePalette = [
-    { color: '#09090b', isBlack: true },
-    { color: '#111114', isBlack: true },
-    { color: '#38bdf8', isBlack: false },
-    { color: '#818cf8', isBlack: false },
-    { color: '#f472b6', isBlack: false },
-    { color: '#ffffff', isBlack: false }
-  ];
-
+  const particleColors = ['#38bdf8', '#818cf8', '#f472b6', '#ffffff'];
   function spawnProgressParticles(count = 1, boosting = false) {
     const rect = pCanvas.getBoundingClientRect();
     if (rect.width <= 0) return;
-
-    const insetPad = 10;
-    const usableWidth = Math.max(1, rect.width - insetPad * 2);
-    const thumbX = insetPad + usableWidth * (smoothProgressPercent / 100);
+    const thumbX = 10 + Math.max(1, rect.width - 20) * (smoothProgressPercent / 100);
     const centerY = rect.height / 2;
-
     for (let i = 0; i < count; i++) {
-      const pickBlack = Math.random() < 0.45;
-      const chosen = pickBlack
-        ? particlePalette[Math.random() < 0.5 ? 0 : 1]
-        : particlePalette[2 + Math.floor(Math.random() * 4)];
-
-      const spread = boosting ? 12 : 6;
+      const color = particleColors[Math.floor(Math.random() * particleColors.length)];
       const angle = Math.random() * Math.PI * 2;
       const speed = boosting ? (Math.random() * 1.1 + 0.35) : (Math.random() * 0.45 + 0.12);
-
       barParticles.push({
-        x: thumbX + (Math.random() - 0.5) * spread,
-        y: centerY + (Math.random() - 0.5) * (boosting ? 9 : 5),
+        x: thumbX + (Math.random() - 0.5) * (boosting ? 12 : 6),
+        y: centerY + (Math.random() - 0.5) * 6,
         vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed - (boosting ? 0.25 : 0.15),
-        size: chosen.isBlack ? (Math.random() * 2.1 + 1.35) : (Math.random() * 2.1 + 1.0),
-        alpha: 0.98,
-        decay: boosting ? (Math.random() * 0.02 + 0.015) : (Math.random() * 0.024 + 0.018),
-        color: chosen.color,
-        isBlack: chosen.isBlack
+        vy: Math.sin(angle) * speed - 0.15,
+        size: Math.random() * 2 + 1,
+        alpha: 0.95,
+        decay: 0.02,
+        color
       });
     }
   }
 
   function spawnVolumeBurst(count = 2) {
     const rect = vCanvas.getBoundingClientRect();
-    if (rect.width <= 0 || rect.height <= 0) return;
+    if (rect.width <= 0) return;
     const xPos = ((rect.width - 18) * (smoothVolumePercent / 100)) + 9;
-    const yPos = rect.height / 2;
-
     for (let i = 0; i < count; i++) {
-      const isBlack = Math.random() < 0.42;
-      const color = isBlack
-        ? '#09090b'
-        : particlePalette[2 + Math.floor(Math.random() * 4)].color;
-
       volParticles.push({
         x: xPos + (Math.random() - 0.5) * 6,
-        y: yPos + (Math.random() - 0.5) * 5,
+        y: rect.height / 2,
         vx: (Math.random() - 0.5) * 0.85,
         vy: (Math.random() - 0.5) * 0.9 - 0.2,
-        size: isBlack ? (Math.random() * 1.8 + 1.2) : (Math.random() * 1.8 + 0.9),
-        alpha: 0.96,
-        decay: Math.random() * 0.026 + 0.018,
-        color,
-        isBlack
+        size: Math.random() * 1.8 + 0.9,
+        alpha: 0.95,
+        decay: 0.022,
+        color: particleColors[Math.floor(Math.random() * particleColors.length)]
       });
     }
-  }
-
-  function drawParticleItem(ctxTarget, pt) {
-    ctxTarget.save();
-    ctxTarget.globalAlpha = Math.max(0, pt.alpha);
-    ctxTarget.fillStyle = pt.color;
-    if (pt.isBlack) {
-      ctxTarget.strokeStyle = 'rgba(255, 255, 255, 0.35)';
-      ctxTarget.lineWidth = 0.75;
-    } else {
-      ctxTarget.shadowBlur = 6;
-      ctxTarget.shadowColor = pt.color;
-    }
-    ctxTarget.beginPath();
-    ctxTarget.arc(pt.x, pt.y, pt.size, 0, Math.PI * 2);
-    ctxTarget.fill();
-    if (pt.isBlack) {
-      ctxTarget.stroke();
-    }
-    ctxTarget.restore();
   }
 
   function renderSlidersAndParticles(timeMs = 0) {
@@ -1622,80 +1246,66 @@ document.addEventListener('DOMContentLoaded', () => {
       topPlayer.style.top = `${currentPlayerY.toFixed(2)}px`;
       topPlayer.style.margin = '0';
     }
-
     renderCavaBars(timeMs);
+    if (activeTabIndex === 1) stepAndRenderDino(timeMs);
+    else if (activeTabIndex === 2) stepAndRenderVinylDisc(timeMs);
 
-    if (activeTabIndex === 1) {
-      stepAndRenderDino(timeMs);
-    } else if (activeTabIndex === 2) {
-      stepAndRenderVinylDisc(timeMs);
-    }
-
-    const progFactor = isScrubbing ? 0.65 : 0.18;
-    smoothProgressPercent += (targetProgressPercent - smoothProgressPercent) * progFactor;
+    smoothProgressPercent += (targetProgressPercent - smoothProgressPercent) * (isScrubbing ? 0.65 : 0.18);
     progressFill.style.width = `${smoothProgressPercent.toFixed(3)}%`;
 
-    const volFactor = isVolumeDragging ? 0.35 : 0.15;
-    smoothVolumePercent += (targetVolumePercent - smoothVolumePercent) * volFactor;
+    smoothVolumePercent += (targetVolumePercent - smoothVolumePercent) * (isVolumeDragging ? 0.35 : 0.15);
     volumeFill.style.width = `${smoothVolumePercent.toFixed(3)}%`;
     volumeThumb.style.left = `${smoothVolumePercent.toFixed(3)}%`;
 
     const pRect = pCanvas.getBoundingClientRect();
     pCtx.clearRect(0, 0, pRect.width, pRect.height);
-
-    if (isScrubbing) {
-      spawnProgressParticles(3, true);
-    } else if (!audio.paused || progressTrackWrap.matches(':hover')) {
-      if (Math.random() < 0.75) {
-        spawnProgressParticles(1, false);
-      }
-    }
+    if (isScrubbing) spawnProgressParticles(3, true);
+    else if (!audio.paused && Math.random() < 0.75) spawnProgressParticles(1, false);
 
     for (let i = barParticles.length - 1; i >= 0; i--) {
       const pt = barParticles[i];
       pt.x += pt.vx;
       pt.y += pt.vy;
       pt.alpha -= pt.decay;
-
-      if (pt.alpha <= 0) {
-        barParticles.splice(i, 1);
-      } else {
-        drawParticleItem(pCtx, pt);
+      if (pt.alpha <= 0) barParticles.splice(i, 1);
+      else {
+        pCtx.save();
+        pCtx.globalAlpha = pt.alpha;
+        pCtx.fillStyle = pt.color;
+        pCtx.beginPath();
+        pCtx.arc(pt.x, pt.y, pt.size, 0, Math.PI * 2);
+        pCtx.fill();
+        pCtx.restore();
       }
     }
 
     const vRect = vCanvas.getBoundingClientRect();
     vCtx.clearRect(0, 0, vRect.width, vRect.height);
-
-    if (volumeControl.classList.contains('open') && (isVolumeDragging || Math.random() < 0.35)) {
-      spawnVolumeBurst(isVolumeDragging ? 2 : 1);
-    }
-
     for (let i = volParticles.length - 1; i >= 0; i--) {
       const vp = volParticles[i];
       vp.x += vp.vx;
       vp.y += vp.vy;
       vp.alpha -= vp.decay;
-
-      if (vp.alpha <= 0) {
-        volParticles.splice(i, 1);
-      } else {
-        drawParticleItem(vCtx, vp);
+      if (vp.alpha <= 0) volParticles.splice(i, 1);
+      else {
+        vCtx.save();
+        vCtx.globalAlpha = vp.alpha;
+        vCtx.fillStyle = vp.color;
+        vCtx.beginPath();
+        vCtx.arc(vp.x, vp.y, vp.size, 0, Math.PI * 2);
+        vCtx.fill();
+        vCtx.restore();
       }
     }
-
     requestAnimationFrame(renderSlidersAndParticles);
   }
-
   requestAnimationFrame(renderSlidersAndParticles);
 
-  // 8. Анимация снежинок на фоне, реакция на вкладки, метель и за курсором
+  // Снег + порыв при переключении вкладок + метель
   const canvas = document.getElementById('snow-canvas');
   const ctx = canvas.getContext('2d');
-
   let width = (canvas.width = window.innerWidth);
   let height = (canvas.height = window.innerHeight);
-
   window.addEventListener('resize', () => {
     width = canvas.width = window.innerWidth;
     height = canvas.height = window.innerHeight;
@@ -1707,8 +1317,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const BASE_AMBIENT_COUNT = 95;
   const MAX_BLIZZARD_COUNT = 260;
 
-  // Плотность и порыв ветра при переключении вкладок
-  const TAB_SNOW_DENSITY = [1.0, 1.35, 0.78]; // профиль, Dino Run, Lo-Fi
+  const TAB_SNOW_DENSITY = [1.0, 1.35, 0.78];
   let tabDensityTarget = TAB_SNOW_DENSITY[0];
   let tabDensityCurrent = TAB_SNOW_DENSITY[0];
   let tabGustBoost = 0;
@@ -1717,15 +1326,12 @@ document.addEventListener('DOMContentLoaded', () => {
     tabDensityTarget = TAB_SNOW_DENSITY[tabIdx] ?? 1.0;
     tabGustBoost = 1.0;
     spawnProgressParticles(8, true);
-
-    const cx = width * 0.5;
-    const cy = height * 0.45;
     for (let i = 0; i < 18; i++) {
       const angle = Math.random() * Math.PI * 2;
       const spd = 1.2 + Math.random() * 2.4;
       cursorSnow.push({
-        x: cx + (Math.random() - 0.5) * 90,
-        y: cy + (Math.random() - 0.5) * 90,
+        x: width * 0.5 + (Math.random() - 0.5) * 90,
+        y: height * 0.45 + (Math.random() - 0.5) * 90,
         speedX: Math.cos(angle) * spd + 1.1,
         speedY: Math.sin(angle) * spd + 0.6,
         radius: Math.random() * 2.4 + 1.0,
@@ -1736,21 +1342,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  function createAmbientFlake(randomY = true) {
-    return {
+  for (let i = 0; i < BASE_AMBIENT_COUNT; i++) {
+    ambientSnow.push({
       x: Math.random() * width,
-      y: randomY ? Math.random() * height : -10,
+      y: Math.random() * height,
       radius: Math.random() * 2.4 + 0.8,
       speedY: Math.random() * 0.9 + 0.35,
       speedX: (Math.random() - 0.5) * 0.45,
       swayPhase: Math.random() * Math.PI * 2,
       swaySpeed: Math.random() * 0.02 + 0.008,
       opacity: Math.random() * 0.5 + 0.16
-    };
-  }
-
-  for (let i = 0; i < BASE_AMBIENT_COUNT; i++) {
-    ambientSnow.push(createAmbientFlake(true));
+    });
   }
 
   function spawnBlizzardFlake() {
@@ -1770,44 +1372,22 @@ document.addEventListener('DOMContentLoaded', () => {
   function spawnCursorFlakes(x, y) {
     const isBlizzard = blizzardCurrentIntensity > 0.15;
     const count = isBlizzard ? Math.round(2 + blizzardCurrentIntensity * 7) : 2;
-
     for (let i = 0; i < count; i++) {
-      if (isBlizzard) {
-        const angle = (Math.random() - 0.35) * 1.1;
-        const gust = (2.2 + Math.random() * 3.8) * blizzardCurrentIntensity;
-        cursorSnow.push({
-          x: x + (Math.random() - 0.5) * 26 * blizzardCurrentIntensity,
-          y: y + (Math.random() - 0.5) * 26 * blizzardCurrentIntensity,
-          speedX: Math.cos(angle) * gust + 1.4 * blizzardCurrentIntensity,
-          speedY: Math.sin(angle) * gust + (Math.random() * 1.8 + 0.6),
-          radius: Math.random() * 2.9 + 1.0,
-          opacity: 0.95,
-          decay: Math.random() * 0.018 + 0.012,
-          swirl: (Math.random() - 0.5) * 0.16
-        });
-      } else {
-        cursorSnow.push({
-          x: x + (Math.random() - 0.5) * 14,
-          y: y + (Math.random() - 0.5) * 14,
-          radius: Math.random() * 2.6 + 1.2,
-          speedX: (Math.random() - 0.5) * 1.4,
-          speedY: Math.random() * 1.2 + 0.5,
-          opacity: 0.95,
-          decay: Math.random() * 0.015 + 0.012,
-          swirl: 0
-        });
-      }
+      cursorSnow.push({
+        x: x + (Math.random() - 0.5) * 16,
+        y: y + (Math.random() - 0.5) * 16,
+        radius: Math.random() * 2.6 + 1.1,
+        speedX: isBlizzard ? (2.2 + Math.random() * 3.5) : ((Math.random() - 0.5) * 1.4),
+        speedY: isBlizzard ? (1.8 + Math.random() * 2.4) : (Math.random() * 1.2 + 0.5),
+        opacity: 0.95,
+        decay: Math.random() * 0.016 + 0.012,
+        swirl: isBlizzard ? (Math.random() - 0.5) * 0.16 : 0
+      });
     }
   }
-
-  window.addEventListener('mousemove', (e) => {
-    spawnCursorFlakes(e.clientX, e.clientY);
-  });
-
+  window.addEventListener('mousemove', (e) => spawnCursorFlakes(e.clientX, e.clientY));
   window.addEventListener('touchmove', (e) => {
-    if (e.touches.length > 0) {
-      spawnCursorFlakes(e.touches[0].clientX, e.touches[0].clientY);
-    }
+    if (e.touches.length > 0) spawnCursorFlakes(e.touches[0].clientX, e.touches[0].clientY);
   }, { passive: true });
 
   function drawFlake(x, y, radius, opacity, stretchX = 0, stretchY = 0) {
@@ -1822,56 +1402,37 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
       ctx.arc(x, y, radius, 0, Math.PI * 2);
       ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
-      ctx.shadowBlur = 6;
-      ctx.shadowColor = 'rgba(255, 255, 255, 0.6)';
       ctx.fill();
     }
   }
 
   function animate(timeMs = 0) {
     ctx.clearRect(0, 0, width, height);
-
     blizzardCurrentIntensity += (blizzardTargetIntensity - blizzardCurrentIntensity) * 0.025;
-    if (blizzardTargetIntensity === 0 && blizzardCurrentIntensity < 0.004) {
-      blizzardCurrentIntensity = 0;
-    }
+    if (blizzardTargetIntensity === 0 && blizzardCurrentIntensity < 0.004) blizzardCurrentIntensity = 0;
 
     tabDensityCurrent += (tabDensityTarget - tabDensityCurrent) * 0.04;
     tabGustBoost *= 0.94;
 
-    const windBoostX =
-      blizzardCurrentIntensity * 4.2 +
-      Math.sin(timeMs * 0.0022) * 1.1 * blizzardCurrentIntensity +
-      tabGustBoost * 2.2;
+    const windBoostX = blizzardCurrentIntensity * 4.2 + tabGustBoost * 2.2;
     const windBoostY = 1 + blizzardCurrentIntensity * 2.4 + tabGustBoost * 0.9;
-
-    const activeAmbientCount = Math.max(
-      35,
-      Math.min(ambientSnow.length, Math.round(BASE_AMBIENT_COUNT * tabDensityCurrent))
-    );
+    const activeAmbientCount = Math.max(35, Math.min(ambientSnow.length, Math.round(BASE_AMBIENT_COUNT * tabDensityCurrent)));
 
     for (let i = 0; i < ambientSnow.length; i++) {
       const f = ambientSnow[i];
-      f.swayPhase += f.swaySpeed * (1 + blizzardCurrentIntensity * 2);
+      f.swayPhase += f.swaySpeed;
       f.y += f.speedY * windBoostY;
-      f.x += f.speedX + windBoostX + Math.sin(f.swayPhase) * (0.25 + blizzardCurrentIntensity * 0.8);
-
-      if (f.y > height + 10) {
-        f.y = -8;
-        f.x = Math.random() * width;
-      }
+      f.x += f.speedX + windBoostX + Math.sin(f.swayPhase) * 0.3;
+      if (f.y > height + 10) { f.y = -8; f.x = Math.random() * width; }
       if (f.x > width + 10) f.x = -8;
       if (f.x < -10) f.x = width + 8;
-
       const visibleFactor = i < activeAmbientCount ? 1 : 0.35;
       const streak = blizzardCurrentIntensity * 2.2 + tabGustBoost * 1.1;
       drawFlake(f.x, f.y, f.radius, f.opacity * visibleFactor, streak, streak * 0.65);
     }
 
     const desiredBlizzardCount = Math.floor(MAX_BLIZZARD_COUNT * blizzardCurrentIntensity);
-    while (blizzardSnow.length < desiredBlizzardCount) {
-      spawnBlizzardFlake();
-    }
+    while (blizzardSnow.length < desiredBlizzardCount) spawnBlizzardFlake();
 
     for (let i = blizzardSnow.length - 1; i >= 0; i--) {
       const bf = blizzardSnow[i];
@@ -1879,11 +1440,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const activeFactor = Math.max(0.25, blizzardCurrentIntensity);
       bf.x += (bf.speedX + Math.cos(bf.swirlPhase) * 1.1) * activeFactor;
       bf.y += (bf.speedY + Math.sin(bf.swirlPhase) * 0.7) * activeFactor;
-
-      if (blizzardTargetIntensity === 0) {
-        bf.opacity -= 0.008;
-      }
-
+      if (blizzardTargetIntensity === 0) bf.opacity -= 0.008;
       if (bf.opacity <= 0.01 || bf.y > height + 20 || bf.x > width + 40) {
         if (blizzardSnow.length > desiredBlizzardCount || bf.opacity <= 0.01) {
           blizzardSnow.splice(i, 1);
@@ -1892,32 +1449,19 @@ document.addEventListener('DOMContentLoaded', () => {
         bf.x = Math.random() < 0.65 ? Math.random() * (width + 200) - 100 : -15;
         bf.y = bf.x < 0 ? Math.random() * height : -12;
       }
-
-      const drawAlpha = bf.opacity * Math.min(1, blizzardCurrentIntensity * 1.35);
-      const streakX = 2.8 * blizzardCurrentIntensity;
-      const streakY = 2.1 * blizzardCurrentIntensity;
-      drawFlake(bf.x, bf.y, bf.radius, drawAlpha, streakX, streakY);
+      drawFlake(bf.x, bf.y, bf.radius, bf.opacity * Math.min(1, blizzardCurrentIntensity * 1.35), 2.8 * blizzardCurrentIntensity, 2.1 * blizzardCurrentIntensity);
     }
 
     for (let i = cursorSnow.length - 1; i >= 0; i--) {
       const p = cursorSnow[i];
-      if (p.swirl) {
-        p.speedY += Math.sin(timeMs * 0.01 + i) * p.swirl;
-      }
+      if (p.swirl) p.speedY += Math.sin(timeMs * 0.01 + i) * p.swirl;
       p.x += p.speedX;
       p.y += p.speedY;
       p.opacity -= p.decay;
-
-      if (p.opacity <= 0) {
-        cursorSnow.splice(i, 1);
-      } else {
-        const cStreak = blizzardCurrentIntensity * 1.8;
-        drawFlake(p.x, p.y, p.radius, p.opacity, cStreak, cStreak * 0.5);
-      }
+      if (p.opacity <= 0) cursorSnow.splice(i, 1);
+      else drawFlake(p.x, p.y, p.radius, p.opacity);
     }
-
     requestAnimationFrame(animate);
   }
-
   animate();
 });

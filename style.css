@@ -84,7 +84,7 @@ body.hacker-mode .link-btn {
   z-index: 1;
 }
 
-/* Плашка остановки пасхалки-метели в нижнем левом углу */
+/* Плашка остановки пасхалки-метели */
 .blizzard-badge {
   position: fixed;
   left: 18px;
@@ -109,12 +109,7 @@ body.hacker-mode .link-btn {
   transform: translateY(12px) scale(0.95);
   visibility: hidden;
   pointer-events: none;
-  transition:
-    opacity 0.55s cubic-bezier(0.22, 1, 0.36, 1),
-    transform 0.55s cubic-bezier(0.22, 1, 0.36, 1),
-    visibility 0.55s ease,
-    border-color 0.25s ease,
-    background-color 0.25s ease;
+  transition: opacity 0.45s ease, transform 0.45s ease, visibility 0.45s ease;
 }
 
 .blizzard-badge.visible {
@@ -122,11 +117,6 @@ body.hacker-mode .link-btn {
   transform: translateY(0) scale(1);
   visibility: visible;
   pointer-events: auto;
-}
-
-.blizzard-badge:hover {
-  background: rgba(22, 24, 32, 0.88);
-  border-color: rgba(125, 211, 252, 0.65);
 }
 
 .blizzard-badge kbd {
@@ -143,10 +133,9 @@ body.hacker-mode .link-btn {
   color: #ffffff;
   background: rgba(56, 189, 248, 0.22);
   border: 1px solid rgba(125, 211, 252, 0.45);
-  box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.45);
 }
 
-/* Счетчик просмотров с глазиком в правом верхнем углу */
+/* Счетчик просмотров */
 .views-badge {
   position: fixed;
   top: 16px;
@@ -166,13 +155,6 @@ body.hacker-mode .link-btn {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.55);
-  transition: transform 0.25s ease, border-color 0.25s ease, background-color 0.25s ease;
-}
-
-.views-badge:hover {
-  transform: translateY(-1px);
-  border-color: rgba(255, 255, 255, 0.24);
-  background: rgba(20, 20, 26, 0.75);
 }
 
 .views-badge svg {
@@ -215,7 +197,6 @@ body.hacker-mode .link-btn {
   padding: 16px 28px;
   text-shadow: 0 0 18px rgba(255, 255, 255, 0.45);
   transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), text-shadow 0.3s ease;
-  animation: pulseGlow 2.4s infinite ease-in-out;
 }
 
 .entry-text .bracket {
@@ -225,19 +206,13 @@ body.hacker-mode .link-btn {
 
 .entry-text:hover {
   transform: scale(1.07);
-  text-shadow: 0 0 28px rgba(255, 255, 255, 0.85);
 }
 
 .entry-text:hover .bracket {
   color: #38bdf8;
 }
 
-@keyframes pulseGlow {
-  0%, 100% { opacity: 0.85; }
-  50% { opacity: 1; }
-}
-
-/* Полупрозрачный проигрыватель с плавным перемещением */
+/* Верхний проигрыватель */
 .top-player-wrap {
   position: fixed;
   top: 14px;
@@ -266,25 +241,11 @@ body.hacker-mode .link-btn {
   box-shadow: 0 8px 26px rgba(0, 0, 0, 0.65);
   cursor: grab;
   touch-action: none;
-  transition:
-    box-shadow 0.28s ease,
-    background-color 0.28s ease,
-    border-color 0.28s ease,
-    transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.top-player:hover {
-  background: rgba(18, 18, 22, 0.72);
-  border-color: rgba(255, 255, 255, 0.22);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.82);
 }
 
 .top-player.dragging {
   cursor: grabbing;
-  background: rgba(20, 20, 26, 0.82);
   border-color: rgba(129, 140, 248, 0.45);
-  box-shadow: 0 16px 38px rgba(0, 0, 0, 0.9);
-  transition: box-shadow 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
 }
 
 .top-player-cover {
@@ -294,11 +255,6 @@ body.hacker-mode .link-btn {
   object-fit: cover;
   flex-shrink: 0;
   border: 1px solid rgba(255, 255, 255, 0.14);
-  transition: transform 0.3s ease;
-}
-
-.top-player.playing .top-player-cover {
-  transform: scale(1.03);
 }
 
 .top-player-main {
@@ -336,7 +292,6 @@ body.hacker-mode .link-btn {
   width: 54px;
   height: 16px;
   flex-shrink: 0;
-  opacity: 0.92;
 }
 
 .top-player-time {
@@ -346,7 +301,6 @@ body.hacker-mode .link-btn {
   flex-shrink: 0;
 }
 
-/* Полоса прогресса */
 .progress-track-wrap {
   position: relative;
   height: 20px;
@@ -362,8 +316,7 @@ body.hacker-mode .link-btn {
   height: 4px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.15);
-  overflow: visible;
-  transition: height 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: height 0.2s ease;
 }
 
 .progress-track-wrap:hover .progress-rail,
@@ -378,7 +331,6 @@ body.hacker-mode .link-btn {
   border-radius: 999px;
   background: linear-gradient(90deg, #38bdf8, #818cf8, #f472b6);
   box-shadow: 0 0 10px rgba(129, 140, 248, 0.55);
-  will-change: width;
 }
 
 .progress-thumb {
@@ -392,14 +344,6 @@ body.hacker-mode .link-btn {
   background: #ffffff;
   border: 1.5px solid #09090b;
   box-shadow: 0 0 10px rgba(255, 255, 255, 0.9);
-  transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.2s ease;
-  will-change: transform;
-}
-
-.progress-track-wrap:hover .progress-thumb,
-.progress-track-wrap.scrubbing .progress-thumb {
-  transform: translateY(-50%) scale(1.3);
-  box-shadow: 0 0 14px rgba(129, 140, 248, 0.95), 0 0 6px #ffffff;
 }
 
 .progress-particles {
@@ -418,14 +362,8 @@ body.hacker-mode .link-btn {
   height: 20px;
   opacity: 0;
   cursor: grab;
-  margin: 0;
 }
 
-.progress-track-wrap.scrubbing .seek-input {
-  cursor: grabbing;
-}
-
-/* Кнопки управления и громкость */
 .top-player-actions {
   display: flex;
   align-items: center;
@@ -444,23 +382,13 @@ body.hacker-mode .link-btn {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  flex-shrink: 0;
-  transition:
-    transform 0.2s cubic-bezier(0.22, 1, 0.36, 1),
-    background-color 0.2s ease,
-    border-color 0.2s ease,
-    box-shadow 0.2s ease;
+  transition: transform 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
 }
 
 .player-action-btn:hover {
   transform: translateY(-1.5px) scale(1.06);
   background: rgba(255, 255, 255, 0.15);
   border-color: rgba(255, 255, 255, 0.28);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
-}
-
-.player-action-btn:active {
-  transform: scale(0.95);
 }
 
 .player-action-btn svg {
@@ -490,17 +418,12 @@ body.hacker-mode .link-btn {
   transform-origin: top right;
   overflow: hidden;
   border-radius: 11px;
-  background: rgba(14, 14, 18, 0.82);
+  background: rgba(14, 14, 18, 0.85);
   border: 1px solid rgba(255, 255, 255, 0);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.75);
   pointer-events: none;
-  transition:
-    height 0.38s cubic-bezier(0.22, 1, 0.36, 1),
-    opacity 0.28s ease,
-    transform 0.38s cubic-bezier(0.22, 1, 0.36, 1),
-    border-color 0.25s ease;
+  transition: height 0.35s ease, opacity 0.25s ease, transform 0.35s ease;
 }
 
 .volume-control.open .volume-drawer {
@@ -518,7 +441,6 @@ body.hacker-mode .link-btn {
   padding: 0 9px;
   display: flex;
   align-items: center;
-  touch-action: none;
 }
 
 .volume-bar-visual {
@@ -527,7 +449,6 @@ body.hacker-mode .link-btn {
   height: 4px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.16);
-  pointer-events: none;
 }
 
 .volume-fill {
@@ -535,8 +456,6 @@ body.hacker-mode .link-btn {
   height: 100%;
   border-radius: 999px;
   background: linear-gradient(90deg, #38bdf8, #a78bfa, #f472b6);
-  box-shadow: 0 0 8px rgba(167, 139, 250, 0.55);
-  will-change: width;
 }
 
 .volume-thumb {
@@ -548,14 +467,7 @@ body.hacker-mode .link-btn {
   border-radius: 50%;
   background: #ffffff;
   border: 1px solid #09090b;
-  box-shadow: 0 0 8px rgba(255, 255, 255, 0.9);
-  transform: translate(-50%, -50%) scale(0.9);
-  transition: transform 0.2s ease;
-  will-change: left;
-}
-
-.volume-control.open .volume-thumb {
-  transform: translate(-50%, -50%) scale(1.05);
+  transform: translate(-50%, -50%);
 }
 
 .volume-particles {
@@ -574,11 +486,10 @@ body.hacker-mode .link-btn {
   height: 100%;
   opacity: 0;
   cursor: pointer;
-  margin: 0;
   z-index: 3;
 }
 
-/* Правая навигация: три пульсирующие точки + подсказка */
+/* Правая навигация: 3 точки */
 .tab-nav-rail {
   position: fixed;
   right: 18px;
@@ -610,16 +521,13 @@ body.hacker-mode .link-btn {
   border: 1px solid rgba(129, 140, 248, 0.34);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.55);
   pointer-events: none;
-  animation: hintFloat 3.4s infinite ease-in-out;
   transition: opacity 0.4s ease, transform 0.4s ease;
 }
 
 .wheel-hint.dismissed {
   opacity: 0 !important;
   transform: translateX(8px) scale(0.95);
-  animation: none;
 }
 
 .wheel-mouse-icon {
@@ -641,32 +549,6 @@ body.is-mobile .mobile-only-icon {
   display: block;
 }
 
-.wheel-scroll-dot {
-  animation: wheelTick 1.5s infinite ease-in-out;
-}
-
-@keyframes wheelTick {
-  0%, 100% {
-    transform: translateY(0px);
-    opacity: 1;
-  }
-  50% {
-    transform: translateY(2.5px);
-    opacity: 0.45;
-  }
-}
-
-@keyframes hintFloat {
-  0%, 100% {
-    opacity: 0.92;
-    transform: translateX(0px);
-  }
-  50% {
-    opacity: 0.55;
-    transform: translateX(-3px);
-  }
-}
-
 .tab-dots-pill {
   display: flex;
   flex-direction: column;
@@ -682,7 +564,6 @@ body.is-mobile .mobile-only-icon {
 }
 
 .tab-dot {
-  position: relative;
   width: 9px;
   height: 9px;
   border-radius: 50%;
@@ -690,19 +571,7 @@ body.is-mobile .mobile-only-icon {
   padding: 0;
   cursor: pointer;
   background: rgba(255, 255, 255, 0.28);
-  transition:
-    transform 0.3s cubic-bezier(0.22, 1, 0.36, 1),
-    background-color 0.3s ease,
-    box-shadow 0.3s ease;
-  animation: dotSubtlePulse 2.4s infinite ease-in-out;
-}
-
-.tab-dot:nth-child(2) {
-  animation-delay: 0.8s;
-}
-
-.tab-dot:nth-child(3) {
-  animation-delay: 1.6s;
+  transition: transform 0.3s ease, background-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 .tab-dot:hover {
@@ -714,30 +583,9 @@ body.is-mobile .mobile-only-icon {
   background: #ffffff;
   transform: scale(1.28);
   box-shadow: 0 0 10px rgba(129, 140, 248, 0.95), 0 0 4px #ffffff;
-  animation: activeDotPulse 2s infinite ease-in-out;
 }
 
-@keyframes dotSubtlePulse {
-  0%, 100% {
-    box-shadow: 0 0 0 0 rgba(129, 140, 248, 0.35);
-    opacity: 0.72;
-  }
-  50% {
-    box-shadow: 0 0 0 5px rgba(129, 140, 248, 0);
-    opacity: 1;
-  }
-}
-
-@keyframes activeDotPulse {
-  0%, 100% {
-    box-shadow: 0 0 10px rgba(129, 140, 248, 0.9), 0 0 0 0 rgba(129, 140, 248, 0.45);
-  }
-  50% {
-    box-shadow: 0 0 14px rgba(129, 140, 248, 1), 0 0 0 6px rgba(129, 140, 248, 0);
-  }
-}
-
-/* Основной контейнер и плавное переключение вкладок */
+/* Основной контейнер и вкладки */
 .container {
   position: relative;
   z-index: 10;
@@ -775,7 +623,6 @@ body.is-mobile .mobile-only-icon {
   visibility: visible;
 }
 
-/* Анимация появления с переворотом при входе */
 .flip-item {
   opacity: 0;
   transform: perspective(900px) rotateX(-85deg) translateY(25px) scale(0.92);
@@ -810,24 +657,11 @@ body.is-mobile .mobile-only-icon {
   -webkit-backdrop-filter: blur(14px);
   box-shadow: 0 8px 26px rgba(0, 0, 0, 0.58), inset 0 1px 0 rgba(255, 255, 255, 0.08);
   transform-style: preserve-3d;
-  will-change: transform;
-  transition:
-    transform 0.18s ease-out,
-    background-color 0.28s ease,
-    border-color 0.28s ease,
-    box-shadow 0.28s ease;
+  transition: transform 0.18s ease-out, border-color 0.28s ease, box-shadow 0.28s ease;
 }
 
 .container.revealed .discord-card {
   transform: perspective(750px) rotateX(var(--dc-rx)) rotateY(var(--dc-ry)) translateY(var(--dc-ty));
-}
-
-.container.revealed .discord-card.is-tilting {
-  transition:
-    transform 0.06s linear,
-    background-color 0.28s ease,
-    border-color 0.28s ease,
-    box-shadow 0.28s ease;
 }
 
 .discord-card:not(.is-offline):hover {
@@ -835,36 +669,22 @@ body.is-mobile .mobile-only-icon {
   box-shadow: 0 14px 34px rgba(0, 0, 0, 0.8), 0 0 22px rgba(129, 140, 248, 0.16);
 }
 
-.discord-card.is-offline:hover {
-  border-color: rgba(255, 255, 255, 0.18);
-}
-
 .discord-glow {
   position: absolute;
   inset: 0;
   pointer-events: none;
   opacity: 0;
-  background: radial-gradient(
-    220px circle at var(--mx) var(--my),
-    rgba(129, 140, 248, 0.22),
-    rgba(56, 189, 248, 0.08) 45%,
-    transparent 75%
-  );
+  background: radial-gradient(220px circle at var(--mx) var(--my), rgba(129, 140, 248, 0.22), transparent 75%);
   transition: opacity 0.28s ease;
-  z-index: 0;
 }
 
 .discord-card:not(.is-offline):hover .discord-glow {
   opacity: 1;
 }
 
-.discord-compact,
-.discord-rpc-drawer {
+.discord-compact {
   position: relative;
   z-index: 1;
-}
-
-.discord-compact {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -886,11 +706,6 @@ body.is-mobile .mobile-only-icon {
   border-radius: 50%;
   object-fit: cover;
   border: 1.5px solid rgba(255, 255, 255, 0.18);
-  transition: transform 0.3s ease;
-}
-
-.discord-card:not(.is-offline):hover .discord-avatar {
-  transform: scale(1.04);
 }
 
 .discord-avatar-decoration {
@@ -901,19 +716,13 @@ body.is-mobile .mobile-only-icon {
   height: 48px;
   transform: translate(-50%, -50%);
   pointer-events: none;
-  object-fit: contain;
   z-index: 2;
-  transition: transform 0.3s ease;
-}
-
-.discord-card:not(.is-offline):hover .discord-avatar-decoration {
-  transform: translate(-50%, -50%) scale(1.05);
 }
 
 .dc-status-dot {
   position: absolute;
-  right: 0px;
-  bottom: 0px;
+  right: 0;
+  bottom: 0;
   width: 11px;
   height: 11px;
   border-radius: 50%;
@@ -922,10 +731,9 @@ body.is-mobile .mobile-only-icon {
   z-index: 3;
 }
 
-.dc-status-dot.online { background: #22c55e; box-shadow: 0 0 8px rgba(34, 197, 94, 0.8); }
-.dc-status-dot.idle { background: #eab308; box-shadow: 0 0 8px rgba(234, 179, 8, 0.65); }
-.dc-status-dot.dnd { background: #ef4444; box-shadow: 0 0 8px rgba(239, 68, 68, 0.75); }
-.dc-status-dot.offline { background: #6b7280; }
+.dc-status-dot.online { background: #22c55e; }
+.dc-status-dot.idle { background: #eab308; }
+.dc-status-dot.dnd { background: #ef4444; }
 
 .discord-user-meta {
   flex: 1;
@@ -943,9 +751,6 @@ body.is-mobile .mobile-only-icon {
   font-size: 13.5px;
   font-weight: 700;
   color: #ffffff;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .discord-handle {
@@ -957,7 +762,6 @@ body.is-mobile .mobile-only-icon {
   font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.4px;
   padding: 1.5px 6px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.07);
@@ -978,15 +782,6 @@ body.is-mobile .mobile-only-icon {
   background: rgba(255, 255, 255, 0.07);
   border: 1px solid rgba(255, 255, 255, 0.1);
   color: #a1a1aa;
-  flex-shrink: 0;
-  transition: transform 0.2s ease, color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
-}
-
-.dc-device-badge:hover {
-  transform: translateY(-1px);
-  color: #ffffff;
-  background: rgba(255, 255, 255, 0.14);
-  border-color: rgba(255, 255, 255, 0.24);
 }
 
 .dc-device-badge svg {
@@ -994,9 +789,9 @@ body.is-mobile .mobile-only-icon {
   height: 11px;
 }
 
-.dc-device-badge.online { color: #4ade80; border-color: rgba(34, 197, 94, 0.28); }
-.dc-device-badge.idle { color: #facc15; border-color: rgba(234, 179, 8, 0.28); }
-.dc-device-badge.dnd { color: #f87171; border-color: rgba(239, 68, 68, 0.28); }
+.dc-device-badge.online { color: #4ade80; }
+.dc-device-badge.idle { color: #facc15; }
+.dc-device-badge.dnd { color: #f87171; }
 
 .discord-summary-line {
   font-size: 11.5px;
@@ -1013,50 +808,24 @@ body.is-mobile .mobile-only-icon {
   gap: 4px;
   font-size: 10px;
   font-weight: 600;
-  letter-spacing: 0.4px;
   color: #9ca3af;
   padding: 4px 8px;
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.07);
-  transition: color 0.25s ease, background-color 0.25s ease, border-color 0.25s ease;
 }
 
-.hint-arrow {
-  display: inline-block;
-  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.discord-card:not(.is-offline):hover .discord-expand-hint,
-.discord-card:not(.is-offline).mobile-expanded .discord-expand-hint {
-  color: #ffffff;
-  background: rgba(129, 140, 248, 0.2);
-  border-color: rgba(129, 140, 248, 0.4);
-}
-
-.discord-card:not(.is-offline):hover .hint-arrow,
-.discord-card:not(.is-offline).mobile-expanded .hint-arrow {
-  transform: rotate(180deg);
-}
-
-/* Выпадающий блок кастомного статуса и RPC */
 .discord-rpc-drawer {
   max-height: 0px;
   opacity: 0;
   overflow: hidden;
-  transform: translateY(-6px);
-  transition:
-    max-height 0.44s cubic-bezier(0.22, 1, 0.36, 1),
-    opacity 0.32s ease,
-    transform 0.44s cubic-bezier(0.22, 1, 0.36, 1),
-    margin-top 0.38s ease;
+  transition: max-height 0.4s ease, opacity 0.3s ease, margin-top 0.35s ease;
 }
 
 .discord-card:not(.is-offline):hover .discord-rpc-drawer,
 .discord-card:not(.is-offline).mobile-expanded .discord-rpc-drawer {
   max-height: 175px;
   opacity: 1;
-  transform: translateY(0);
   margin-top: 11px;
 }
 
@@ -1071,29 +840,6 @@ body.is-mobile .mobile-only-icon {
   border: 1px solid rgba(255, 255, 255, 0.08);
   font-size: 11.5px;
   color: #e4e4e7;
-  opacity: 0;
-  transform: translateY(-6px) scale(0.97);
-  transition:
-    opacity 0.38s cubic-bezier(0.22, 1, 0.36, 1) 0.06s,
-    transform 0.38s cubic-bezier(0.22, 1, 0.36, 1) 0.06s;
-}
-
-.discord-card:not(.is-offline):hover .dc-custom-box,
-.discord-card:not(.is-offline).mobile-expanded .dc-custom-box {
-  opacity: 1;
-  transform: translateY(0) scale(1);
-}
-
-.dc-custom-emoji {
-  font-size: 13px;
-  line-height: 1;
-  flex-shrink: 0;
-}
-
-.dc-custom-text {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .discord-rpc-inner {
@@ -1102,17 +848,6 @@ body.is-mobile .mobile-only-icon {
   gap: 10px;
   padding-top: 9px;
   border-top: 1px solid rgba(255, 255, 255, 0.09);
-  opacity: 0;
-  transform: translateY(-6px);
-  transition:
-    opacity 0.4s cubic-bezier(0.22, 1, 0.36, 1) 0.1s,
-    transform 0.4s cubic-bezier(0.22, 1, 0.36, 1) 0.1s;
-}
-
-.discord-card:not(.is-offline):hover .discord-rpc-inner,
-.discord-card:not(.is-offline).mobile-expanded .discord-rpc-inner {
-  opacity: 1;
-  transform: translateY(0);
 }
 
 .dc-rpc-img {
@@ -1121,7 +856,6 @@ body.is-mobile .mobile-only-icon {
   border-radius: 10px;
   object-fit: cover;
   flex-shrink: 0;
-  border: 1px solid rgba(255, 255, 255, 0.16);
 }
 
 .dc-rpc-text {
@@ -1133,25 +867,17 @@ body.is-mobile .mobile-only-icon {
   font-size: 12.5px;
   font-weight: 700;
   color: #ffffff;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .dc-rpc-line {
   font-size: 11px;
   color: #9ca3af;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .dc-rpc-elapsed {
   font-size: 10.5px;
-  font-variant-numeric: tabular-nums;
   color: #818cf8;
   font-weight: 600;
-  flex-shrink: 0;
 }
 
 /* Профиль */
@@ -1169,16 +895,12 @@ body.is-mobile .mobile-only-icon {
   cursor: pointer;
   border: 2px solid #26262b;
   box-shadow: 0 0 25px rgba(0, 0, 0, 0.9);
-  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.35s ease, box-shadow 0.35s ease;
+  transition: transform 0.25s ease, border-color 0.35s ease, box-shadow 0.35s ease;
 }
 
 .avatar-img:hover {
   transform: scale(1.05);
   border-color: #52525b;
-}
-
-.avatar-img:active {
-  transform: scale(0.95);
 }
 
 body.blizzard-active .avatar-img {
@@ -1200,7 +922,7 @@ h1 {
   color: #9ca3af;
 }
 
-/* Список кнопок */
+/* Кнопки ссылок */
 .links {
   display: flex;
   flex-direction: column;
@@ -1224,9 +946,430 @@ h1 {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   transform-style: preserve-3d;
+  transition: transform 0.16s ease-out, box-shadow 0.25s ease, background-color 0.25s ease, border-color 0.25s ease;
+}
+
+.container.revealed .link-btn {
+  transform: perspective(700px) rotateX(var(--rx)) rotateY(var(--ry)) translateY(var(--ty));
+}
+
+.link-btn::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.18), transparent);
+  transform: skewX(-25deg);
+  transition: left 0.55s ease;
+}
+
+.link-btn:hover::before {
+  left: 140%;
+}
+
+.tg-btn {
+  background: linear-gradient(135deg, rgba(34, 158, 217, 0.68) 0%, rgba(22, 119, 168, 0.68) 100%);
+  color: #ffffff;
+  border: 1px solid rgba(56, 189, 248, 0.45);
+  box-shadow: 0 6px 20px rgba(34, 158, 217, 0.22);
+}
+
+.tg-btn:hover {
+  background: linear-gradient(135deg, rgba(41, 169, 230, 0.82) 0%, rgba(27, 133, 186, 0.82) 100%);
+  border-color: rgba(125, 211, 252, 0.8);
+  box-shadow: 0 10px 28px rgba(34, 158, 217, 0.42);
+}
+
+.gray-btn {
+  background: rgba(20, 20, 24, 0.58);
+  color: #e5e7eb;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+}
+
+.gray-btn:hover {
+  background: rgba(32, 32, 38, 0.76);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.28);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.72);
+}
+
+/* Вкладка 2: Мини-игра Динозаврик */
+.dino-card {
+  padding: 16px;
+  border-radius: 16px;
+  background: linear-gradient(145deg, rgba(19, 19, 25, 0.74) 0%, rgba(12, 12, 16, 0.7) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.68), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  text-align: left;
+}
+
+.dino-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.dino-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dino-title {
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 13.5px;
+  font-weight: 700;
+  letter-spacing: 1.4px;
+  color: #ffffff;
+}
+
+.dino-subtitle {
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+.dino-scores {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 12.5px;
+  color: #a1a1aa;
+}
+
+.dino-scores strong {
+  color: #818cf8;
+}
+
+#dino-score {
+  color: #f9fafb;
+  font-weight: 700;
+}
+
+.dino-stage {
+  position: relative;
+  width: 100%;
+  height: 175px;
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  touch-action: manipulation;
+  background: rgba(8, 8, 12, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+#dino-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.dino-overlay-msg {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 0 12px;
+  background: rgba(5, 5, 8, 0.46);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  text-align: center;
+  transition: opacity 0.25s ease, visibility 0.25s ease;
+}
+
+.dino-overlay-msg.hidden-msg {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+#dino-msg-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+#dino-msg-sub {
+  font-size: 11.5px;
+  color: #a1a1aa;
+}
+
+/* Вкладка 3: Lo-Fi режим с zzzzz и сбоящий виниловый диск */
+.lofi-card {
+  padding: 20px 18px;
+  border-radius: 18px;
+  background: linear-gradient(145deg, rgba(22, 20, 32, 0.78) 0%, rgba(12, 12, 18, 0.74) 100%);
+  border: 1px solid rgba(167, 139, 250, 0.24);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.72), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  text-align: left;
+}
+
+.lofi-layout {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.lofi-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.lofi-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  align-self: flex-start;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #d8b4fe;
+  background: rgba(167, 139, 250, 0.14);
+  border: 1px solid rgba(167, 139, 250, 0.3);
+}
+
+.lofi-pulse-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #c084fc;
+  box-shadow: 0 0 8px rgba(192, 132, 252, 0.9);
+  animation: lofiDot 2s infinite ease-in-out;
+}
+
+@keyframes lofiDot {
+  0%, 100% { opacity: 0.45; transform: scale(0.9); }
+  50% { opacity: 1; transform: scale(1.15); }
+}
+
+.lofi-text-wrap {
+  position: relative;
+  padding-top: 34px;
+}
+
+.lofi-caption {
+  font-size: 16px;
+  font-weight: 600;
+  color: #f3e8ff;
+  letter-spacing: 0.2px;
+  text-shadow: 0 0 16px rgba(192, 132, 252, 0.28);
+}
+
+.lofi-z-stream {
+  position: absolute;
+  left: 6px;
+  top: 0;
+  height: 36px;
+  display: flex;
+  align-items: flex-end;
+}
+
+.zzz-char {
+  position: absolute;
+  left: var(--z-x, 0px);
+  bottom: 0;
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: var(--z-size, 14px);
+  font-weight: 700;
+  line-height: 1;
+  color: #e9d5ff;
+  opacity: 0;
+  text-shadow: 0 0 10px rgba(192, 132, 252, 0.65);
+  animation: zzzFloatUp 3.2s infinite cubic-bezier(0.22, 1, 0.36, 1);
+  animation-delay: var(--z-delay, 0s);
+}
+
+@keyframes zzzFloatUp {
+  0% {
+    opacity: 0;
+    transform: translate(0px, 6px) scale(0.75) rotate(-6deg);
+  }
+  20% {
+    opacity: 0.95;
+  }
+  70% {
+    opacity: 0.55;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(12px, -28px) scale(1.12) rotate(8deg);
+  }
+}
+
+.disc-glitch-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 11px;
+  color: #a1a1aa;
+  transition: color 0.2s ease;
+}
+
+.disc-status-indicator {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #38bdf8;
+  box-shadow: 0 0 7px rgba(56, 189, 248, 0.8);
+}
+
+.lofi-card.is-glitching .disc-glitch-status {
+  color: #f472b6;
+}
+
+.lofi-card.is-glitching .disc-status-indicator {
+  background: #f472b6;
+  box-shadow: 0 0 9px rgba(244, 114, 182, 0.95);
+}
+
+.vinyl-deck {
+  position: relative;
+  width: 112px;
+  height: 112px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.vinyl-disc {
+  position: relative;
+  width: 104px;
+  height: 104px;
+  border-radius: 50%;
+  background: repeating-radial-gradient(circle at center, #101014 0px, #101014 2px, #1d1d24 3px, #101014 4.5px);
+  border: 1.5px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.8), inset 0 0 14px rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   will-change: transform;
-  transition:
-    transform 0.16s ease-out,
-    box-shadow 0.25s ease,
-    background-color 0.25s ease,
-    border-color 0.25
+}
+
+.vinyl-sheen {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  background: linear-gradient(130deg, rgba(255, 255, 255, 0.14) 0%, transparent 62%, rgba(129, 140, 248, 0.12) 100%);
+}
+
+.vinyl-label {
+  position: relative;
+  z-index: 2;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 1.5px solid rgba(255, 255, 255, 0.25);
+}
+
+.vinyl-label img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.vinyl-spindle {
+  position: absolute;
+  z-index: 3;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #e5e7eb;
+  border: 1.5px solid #09090b;
+}
+
+.tonearm {
+  position: absolute;
+  top: 6px;
+  right: 2px;
+  width: 34px;
+  height: 3px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #9ca3af, #e5e7eb);
+  transform-origin: right center;
+  transform: rotate(28deg);
+  pointer-events: none;
+  transition: transform 0.22s ease;
+}
+
+.tonearm::after {
+  content: "";
+  position: absolute;
+  left: -2px;
+  top: -2px;
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
+  background: #38bdf8;
+}
+
+.lofi-card.is-glitching .tonearm {
+  transform: rotate(35deg);
+}
+
+.footer {
+  margin-top: 28px;
+  font-size: 13px;
+  color: #52525b;
+  cursor: pointer;
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 8px;
+}
+
+/* Мобильная адаптация */
+body.is-mobile {
+  overflow-y: auto;
+  padding: 96px 14px 48px;
+}
+
+body.is-mobile .top-player-wrap {
+  padding-right: 92px;
+  justify-content: flex-start;
+}
+
+body.is-mobile .views-badge {
+  top: 16px;
+  right: 12px;
+  padding: 6px 10px;
+}
+
+body.is-mobile .tab-nav-rail {
+  right: 8px;
+}
+
+body.is-mobile .wheel-hint span {
+  display: none;
+}
+
+@media (max-width: 520px) {
+  .tab-nav-rail { right: 8px; }
+  .wheel-hint span { display: none; }
+  .avatar-img { width: 84px; height: 84px; }
+  .link-btn { padding: 13px 16px; font-size: 15px; }
+  .vinyl-deck { width: 96px; height: 96px; }
+  .vinyl-disc { width: 90px; height: 90px; }
+}
