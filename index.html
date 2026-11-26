@@ -6,9 +6,19 @@
   <title>sekailauren — Bio</title>
   <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body data-accent="neon">
   <canvas id="snow-canvas"></canvas>
+  <div id="cursor-glow" class="cursor-glow" aria-hidden="true"></div>
   <div id="hacker-scanlines" class="hacker-scanlines" aria-hidden="true"></div>
+  <div id="copy-toast" class="copy-toast" role="status" aria-live="polite">Скопировано</div>
+
+  <!-- Переключатель акцентной темы -->
+  <div id="theme-switcher" class="theme-switcher" aria-label="Выбор акцентного цвета">
+    <button type="button" class="theme-dot active" data-accent="neon" title="Neon" aria-label="Тема Neon"></button>
+    <button type="button" class="theme-dot" data-accent="ice" title="Ice" aria-label="Тема Ice"></button>
+    <button type="button" class="theme-dot" data-accent="hacker" title="Hacker" aria-label="Тема Hacker"></button>
+    <button type="button" class="theme-dot" data-accent="lofi" title="Lo-Fi" aria-label="Тема Lo-Fi"></button>
+  </div>
 
   <button id="blizzard-badge" class="blizzard-badge" type="button" aria-label="Остановить метель">
     <kbd>Q</kbd>
@@ -119,13 +129,16 @@
   <main id="main-content" class="container hidden">
     <!-- Вкладка 1 -->
     <section id="tab-profile" class="tab-panel active">
-      <header class="profile flip-item" style="--delay: 0.05s;">
+      <header class="profile anim-avatar">
         <img id="main-avatar" class="avatar-img" src="avatar.jpg" alt="Аватар sekailauren">
         <h1>sekailauren</h1>
         <p class="bio">16 y. o. вайбкодер, делаю разные проекты на python, C++.</p>
+        <button id="mood-line" class="mood-line" type="button" title="Нажми, чтобы сменить статус">
+          сейчас: пилю новые фичи и слушаю треки
+        </button>
       </header>
 
-      <section id="discord-card" class="discord-card is-offline flip-item" style="--delay: 0.12s;" aria-label="Discord профиль и активность">
+      <section id="discord-card" class="discord-card is-offline anim-card" aria-label="Discord профиль и активность">
         <div class="discord-glow" aria-hidden="true"></div>
 
         <div class="discord-compact">
@@ -138,7 +151,7 @@
           <div class="discord-user-meta">
             <div class="discord-name-row">
               <span id="dc-username" class="discord-username">sekailauren</span>
-              <span id="dc-handle" class="discord-handle">@hurukoo</span>
+              <button id="dc-handle" class="discord-handle-btn" type="button" title="Скопировать @hurukoo">@hurukoo</button>
               <span id="dc-status-text" class="discord-status-badge offline">offline</span>
               <span id="dc-device-badge" class="dc-device-badge hidden-icon" title="Устройство"></span>
             </div>
@@ -170,16 +183,16 @@
       </section>
 
       <nav class="links" aria-label="Основные ссылки">
-        <a class="link-btn tg-btn tilt-btn flip-item" style="--delay: 0.22s;" href="https://t.me/sekailauren" target="_blank" rel="noopener">
+        <a class="link-btn tg-btn tilt-btn anim-link" style="--i: 0;" href="https://t.me/sekailauren" target="_blank" rel="noopener">
           <span>Telegram</span>
         </a>
-        <a class="link-btn gray-btn tilt-btn flip-item" style="--delay: 0.34s;" href="https://github.com/zxckill666" target="_blank" rel="noopener">
+        <a class="link-btn gray-btn tilt-btn anim-link" style="--i: 1;" href="https://github.com/zxckill666" target="_blank" rel="noopener">
           <span>GitHub</span>
         </a>
-        <a class="link-btn gray-btn tilt-btn flip-item" style="--delay: 0.46s;" href="https://soundcloud.com/kawaimonster87" target="_blank" rel="noopener">
+        <a class="link-btn gray-btn tilt-btn anim-link" style="--i: 2;" href="https://soundcloud.com/kawaimonster87" target="_blank" rel="noopener">
           <span>SoundCloud</span>
         </a>
-        <a class="link-btn gray-btn tilt-btn flip-item" style="--delay: 0.58s;" href="mailto:bilyaeva.02031993@outlook.com">
+        <a id="email-link-btn" class="link-btn gray-btn tilt-btn anim-link" style="--i: 3;" href="mailto:bilyaeva.02031993@outlook.com" data-copy="bilyaeva.02031993@outlook.com">
           <span>Написать на почту</span>
         </a>
       </nav>
@@ -187,7 +200,7 @@
 
     <!-- Вкладка 2: Dino Run -->
     <section id="tab-dino" class="tab-panel" aria-label="Мини-игра Динозаврик">
-      <div class="dino-card">
+      <div id="dino-card" class="dino-card">
         <div class="dino-header">
           <div class="dino-title-group">
             <span class="dino-title">DINO RUN</span>
@@ -221,7 +234,7 @@
 
             <div class="lofi-text-wrap">
               <p class="lofi-caption">слушаю lo fi музыку</p>
-              <div class="lofi-z-stream" aria-hidden="true">
+              <div id="lofi-z-stream" class="lofi-z-stream" aria-hidden="true">
                 <span class="zzz-char" style="--z-delay: 0s; --z-size: 12px; --z-x: 0px;">z</span>
                 <span class="zzz-char" style="--z-delay: 0.45s; --z-size: 14px; --z-x: 5px;">z</span>
                 <span class="zzz-char" style="--z-delay: 0.9s; --z-size: 16px; --z-x: 10px;">z</span>
@@ -250,7 +263,7 @@
       </div>
     </section>
 
-    <footer id="footer-copyright" class="footer flip-item" style="--delay: 0.70s;" title="Кликни 4 раза или напиши hack">
+    <footer id="footer-copyright" class="footer anim-link" style="--i: 4;" title="Кликни 4 раза или напиши hack">
       <span>© 2026</span>
     </footer>
   </main>

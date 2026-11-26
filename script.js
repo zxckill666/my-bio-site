@@ -1,4 +1,71 @@
 document.addEventListener('DOMContentLoaded', () => {
+  // Переключатель темы с сохранением в localStorage
+  const ACCENT_KEY = 'sekailauren_accent_theme_v1';
+  const themeDots = document.querySelectorAll('.theme-dot');
+
+  function applyAccentTheme(accentName) {
+    const allowed = ['neon', 'ice', 'hacker', 'lofi'];
+    const chosen = allowed.includes(accentName) ? accentName : 'neon';
+    document.body.setAttribute('data-accent', chosen);
+    localStorage.setItem(ACCENT_KEY, chosen);
+    themeDots.forEach((dot) => {
+      dot.classList.toggle('active', dot.getAttribute('data-accent') === chosen);
+    });
+  }
+  applyAccentTheme(localStorage.getItem(ACCENT_KEY) || 'neon');
+  themeDots.forEach((dot) => {
+    dot.addEventListener('click', () => applyAccentTheme(dot.getAttribute('data-accent')));
+  });
+
+  // Копирование в буфер + тост
+  const copyToast = document.getElementById('copy-toast');
+  let toastTimer = null;
+
+  function showCopyToast(text = 'Скопировано') {
+    if (!copyToast) return;
+    copyToast.textContent = text;
+    copyToast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => copyToast.classList.remove('show'), 1500);
+  }
+
+  function copyToClipboard(val) {
+    if (!val) return;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(val).catch(() => {});
+    }
+    showCopyToast(`Скопировано: ${val}`);
+  }
+
+  const emailLinkBtn = document.getElementById('email-link-btn');
+  if (emailLinkBtn) {
+    emailLinkBtn.addEventListener('click', () => {
+      copyToClipboard(emailLinkBtn.getAttribute('data-copy') || '');
+    });
+  }
+
+  // Строка живого фокуса под био
+  const moodLine = document.getElementById('mood-line');
+  const moodPhrases = [
+    'сейчас: пилю новые фичи и слушаю треки',
+    'фокус: Python / C++ и эксперименты с UI',
+    'вайб: ночной код и немного Lo-Fi'
+  ];
+  let moodIdx = 0;
+  if (moodLine) {
+    moodLine.addEventListener('click', () => {
+      moodIdx = (moodIdx + 1) % moodPhrases.length;
+      moodLine.textContent = moodPhrases[moodIdx];
+    });
+  }
+
+  // Свечение за курсором на ПК
+  const cursorGlow = document.getElementById('cursor-glow');
+  window.addEventListener('mousemove', (e) => {
+    if (!cursorGlow || document.body.classList.contains('is-mobile')) return;
+    cursorGlow.style.transform = `translate3d(${(e.clientX - 120).toFixed(1)}px, ${(e.clientY - 120).toFixed(1)}px, 0)`;
+  }, { passive: true });
+
   function detectDeviceEnvironment() {
     const ua = navigator.userAgent || '';
     const isMobileUa = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
@@ -80,6 +147,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let activeRpcStartMs = null;
 
+  if (dcHandleEl) {
+    dcHandleEl.addEventListener('click', (e) => {
+      e.stopPropagation();
+      copyToClipboard(dcHandleEl.textContent.trim());
+    });
+  }
+
   const DEVICE_ICONS = {
     desktop: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>',
     mobile: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>',
@@ -143,7 +217,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const user = data.discord_user;
     if (user) {
       dcUsernameEl.textContent = user.global_name || user.username || 'sekailauren';
-      dcHandleEl.textContent = user.username ? `@${user.username}` : '';
+      if (user.username) dcHandleEl.textContent = `@${user.username}`;
       if (user.avatar) {
         const ext = user.avatar.startsWith('a_') ? 'gif' : 'png';
         dcAvatarEl.src = `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.${ext}?size=128`;
@@ -355,9 +429,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function triggerHackerEasterEgg(durationMs = 4200) {
     document.body.classList.add('hacker-mode');
+    applyAccentTheme('hacker');
     clearTimeout(hackerModeTimeout);
     hackerModeTimeout = setTimeout(() => {
       document.body.classList.remove('hacker-mode');
+      applyAccentTheme(localStorage.getItem(ACCENT_KEY) || 'neon');
     }, durationMs);
   }
 
@@ -373,7 +449,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Пасхалка-метель на аватарке
+  // Метель на аватарке
   const mainAvatar = document.getElementById('main-avatar');
   const blizzardBadge = document.getElementById('blizzard-badge');
   let avatarClickCount = 0;
@@ -407,7 +483,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   if (blizzardBadge) blizzardBadge.addEventListener('click', stopBlizzard);
 
-  // Переключение вкладок + реакция снега и частиц
+  // Переключение вкладок + пружинный отклик + реакция снега
   let onTabSwitchedEffect = null;
   const tabPanels = [
     document.getElementById('tab-profile'),
@@ -419,7 +495,16 @@ document.addEventListener('DOMContentLoaded', () => {
   let activeTabIndex = 0;
   let lastWheelSwitchTime = 0;
 
-  function switchTab(nextIndex) {
+  function triggerTabSpring(direction) {
+    const activePanel = tabPanels[activeTabIndex];
+    if (!activePanel) return;
+    activePanel.style.setProperty('--spring-y', `${direction > 0 ? 12 : -12}px`);
+    requestAnimationFrame(() => {
+      activePanel.style.setProperty('--spring-y', '0px');
+    });
+  }
+
+  function switchTab(nextIndex, direction = 1) {
     const total = tabPanels.length;
     const normalized = ((nextIndex % total) + total) % total;
     if (normalized === activeTabIndex) return;
@@ -427,6 +512,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     tabPanels.forEach((panel, idx) => panel.classList.toggle('active', idx === activeTabIndex));
     tabDots.forEach((dot, idx) => dot.classList.toggle('active', idx === activeTabIndex));
+    triggerTabSpring(direction);
 
     if (wheelHint && !wheelHint.classList.contains('dismissed')) {
       wheelHint.classList.add('dismissed');
@@ -437,7 +523,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   tabDots.forEach((dot) => {
     dot.addEventListener('click', () => {
-      switchTab(parseInt(dot.getAttribute('data-tab') || '0', 10));
+      const targetIdx = parseInt(dot.getAttribute('data-tab') || '0', 10);
+      switchTab(targetIdx, targetIdx > activeTabIndex ? 1 : -1);
     });
   });
 
@@ -446,7 +533,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const now = Date.now();
     if (now - lastWheelSwitchTime < 460) return;
     lastWheelSwitchTime = now;
-    switchTab(e.deltaY > 0 ? activeTabIndex + 1 : activeTabIndex - 1);
+    const dir = e.deltaY > 0 ? 1 : -1;
+    switchTab(activeTabIndex + dir, dir);
   }, { passive: true });
 
   let touchStartY = null;
@@ -458,10 +546,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!isEntered || touchStartY === null || e.changedTouches.length === 0) return;
     const diffY = touchStartY - e.changedTouches[0].clientY;
     touchStartY = null;
-    if (Math.abs(diffY) > 55) switchTab(diffY > 0 ? activeTabIndex + 1 : activeTabIndex - 1);
+    if (Math.abs(diffY) > 55) {
+      const dir = diffY > 0 ? 1 : -1;
+      switchTab(activeTabIndex + dir, dir);
+    }
   }, { passive: true });
 
   // Мини-игра Dino Run
+  const dinoCard = document.getElementById('dino-card');
   const dinoStage = document.getElementById('dino-stage');
   const dinoCanvas = document.getElementById('dino-canvas');
   const dinoCtx = dinoCanvas.getContext('2d');
@@ -491,6 +583,14 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   resizeDinoCanvas();
   window.addEventListener('resize', resizeDinoCanvas);
+
+  function triggerDinoCardEffect(className, durationMs = 260) {
+    if (!dinoCard) return;
+    dinoCard.classList.remove(className);
+    void dinoCard.offsetWidth;
+    dinoCard.classList.add(className);
+    setTimeout(() => dinoCard.classList.remove(className), durationMs);
+  }
 
   let sfxCtx = null;
   function playDinoSound(type) {
@@ -538,6 +638,7 @@ document.addEventListener('DOMContentLoaded', () => {
     gameOver: false,
     score: 0,
     lastMilestone: 0,
+    beatRecordThisRun: false,
     speed: 4.5,
     groundScroll: 0,
     nextSpawnFrames: 60,
@@ -565,6 +666,7 @@ document.addEventListener('DOMContentLoaded', () => {
     dinoState.gameOver = false;
     dinoState.score = 0;
     dinoState.lastMilestone = 0;
+    dinoState.beatRecordThisRun = false;
     dinoState.speed = 4.5;
     dinoState.obstacles = [];
     dinoState.dust = [];
@@ -808,11 +910,15 @@ document.addEventListener('DOMContentLoaded', () => {
           dinoState.gameOver = true;
           dinoState.running = false;
           playDinoSound('hit');
+          triggerDinoCardEffect('hit-shake', 250);
           const finalScore = Math.floor(dinoState.score);
           if (finalScore > dinoBest) {
             dinoBest = finalScore;
             localStorage.setItem(DINO_BEST_KEY, String(dinoBest));
             dinoBestEl.textContent = String(dinoBest).padStart(4, '0');
+            if (dinoState.beatRecordThisRun) {
+              triggerDinoCardEffect('record-flash', 420);
+            }
           }
           dinoMsgTitle.textContent = `Игра окончена · Счёт: ${finalScore}`;
           dinoMsgSub.textContent = isMobileDevice ? 'Тапни по экрану, чтобы сыграть снова' : 'Нажми Space или кликни, чтобы сыграть снова';
@@ -823,6 +929,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
       dinoState.score += 0.17;
       const wholeScore = Math.floor(dinoState.score);
+      if (dinoBest > 0 && wholeScore > dinoBest && !dinoState.beatRecordThisRun) {
+        dinoState.beatRecordThisRun = true;
+        triggerDinoCardEffect('record-flash', 400);
+      }
       if (wholeScore > 0 && wholeScore % 100 === 0 && wholeScore !== dinoState.lastMilestone) {
         dinoState.lastMilestone = wholeScore;
         playDinoSound('milestone');
@@ -970,11 +1080,12 @@ document.addEventListener('DOMContentLoaded', () => {
   topPlayer.addEventListener('pointerup', stopPlayerDrag);
   topPlayer.addEventListener('pointercancel', stopPlayerDrag);
 
-  // CAVA эквалайзер
+  // CAVA эквалайзер + реакция басов на тему/фон
   const cavaCanvas = document.getElementById('cava-canvas');
   const cavaCtx = cavaCanvas.getContext('2d');
   const CAVA_BARS = 8;
   const cavaLevels = new Array(CAVA_BARS).fill(0.15);
+  let smoothBass = 0;
 
   function renderCavaBars(timeMs) {
     const w = cavaCanvas.width;
@@ -982,12 +1093,29 @@ document.addEventListener('DOMContentLoaded', () => {
     cavaCtx.clearRect(0, 0, w, h);
     const isPlaying = !audio.paused && !audio.muted && audio.volume > 0.01;
     let hasRealAudio = false;
+    let bassRaw = 0;
+
     if (analyser && freqData && isPlaying) {
       analyser.getByteFrequencyData(freqData);
       for (let i = 0; i < freqData.length; i++) {
         if (freqData[i] > 6) { hasRealAudio = true; break; }
       }
+      if (hasRealAudio) {
+        bassRaw = Math.min(1, ((freqData[1] + freqData[2] + freqData[3]) / (3 * 255)) * 1.4);
+      }
     }
+
+    if (isPlaying && !hasRealAudio) {
+      bassRaw = 0.35 + 0.35 * Math.sin(timeMs * 0.008);
+    }
+    smoothBass += (bassRaw - smoothBass) * 0.16;
+    document.body.style.setProperty('--bass-energy', smoothBass.toFixed(3));
+
+    const styles = getComputedStyle(document.body);
+    const c1 = styles.getPropertyValue('--accent-1').trim() || '#38bdf8';
+    const c2 = styles.getPropertyValue('--accent-2').trim() || '#818cf8';
+    const c3 = styles.getPropertyValue('--accent-3').trim() || '#f472b6';
+
     const gap = 2;
     const barWidth = Math.max(2, (w - gap * (CAVA_BARS - 1)) / CAVA_BARS);
     for (let i = 0; i < CAVA_BARS; i++) {
@@ -1007,9 +1135,9 @@ document.addEventListener('DOMContentLoaded', () => {
       const x = i * (barWidth + gap);
       const y = h - barHeight;
       const grad = cavaCtx.createLinearGradient(0, y, 0, h);
-      grad.addColorStop(0, '#38bdf8');
-      grad.addColorStop(0.55, '#818cf8');
-      grad.addColorStop(1, '#f472b6');
+      grad.addColorStop(0, c1);
+      grad.addColorStop(0.55, c2);
+      grad.addColorStop(1, c3);
       cavaCtx.fillStyle = grad;
       cavaCtx.beginPath();
       cavaCtx.roundRect(x, y, barWidth, barHeight, 2);
@@ -1130,6 +1258,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  seekSlider.addEventListener('input', () => {
+    const pct = parseFloat(seekSlider.value);
+    targetProgressPercent = pct;
+    smoothProgressPercent = pct;
+    progressFill.style.width = `${pct.toFixed(3)}%`;
+    if (Number.isFinite(audio.duration) && audio.duration > 0) {
+      audio.currentTime = (pct / 100) * audio.duration;
+      currentTimeEl.textContent = formatTime(audio.currentTime);
+    }
+  });
+
   seekSlider.addEventListener('pointerdown', (e) => {
     e.stopPropagation();
     isScrubbing = true;
@@ -1153,7 +1292,6 @@ document.addEventListener('DOMContentLoaded', () => {
   seekSlider.addEventListener('pointerup', endScrub);
   seekSlider.addEventListener('pointercancel', endScrub);
 
-  // 3D-наклон кнопок
   document.querySelectorAll('.tilt-btn').forEach((btn) => {
     btn.addEventListener('mousemove', (e) => {
       if (isMobileDevice) return;
@@ -1169,7 +1307,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // Частицы ползунков
   const pCanvas = document.getElementById('progress-particles');
   const pCtx = pCanvas.getContext('2d');
   const barParticles = [];
