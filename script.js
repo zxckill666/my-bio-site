@@ -51,9 +51,7 @@ document.addEventListener('DOMContentLoaded', () => {
           viewsCountEl.textContent = String(remoteVal);
         }
       })
-      .catch(() => {
-        // Оставляем локальный счетчик, если внешний сервис недоступен
-      });
+      .catch(() => {});
   }
 
   updateViewsCounter();
@@ -63,7 +61,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const enterBtn = document.getElementById('enter-btn');
   const mainContent = document.getElementById('main-content');
 
-  // Подготовка Web Audio API для живых CAVA-полосок от звука
   let audioCtx = null;
   let analyser = null;
   let freqData = null;
@@ -217,7 +214,6 @@ document.addEventListener('DOMContentLoaded', () => {
           const binIndex = Math.min(freqData.length - 1, Math.floor((i / CAVA_BARS) * 18) + 1);
           targetLevel = Math.max(0.16, Math.min(1, (freqData[binIndex] / 255) * 1.25));
         } else {
-          // Живая волна в стиле CAVA при воспроизведении
           const wave1 = Math.sin(timeMs * 0.0085 + i * 0.75) * 0.5 + 0.5;
           const wave2 = Math.cos(timeMs * 0.013 - i * 1.1) * 0.5 + 0.5;
           targetLevel = Math.max(0.18, Math.min(0.96, wave1 * 0.62 + wave2 * 0.34));
@@ -381,15 +377,19 @@ document.addEventListener('DOMContentLoaded', () => {
     durationTimeEl.textContent = formatTime(audio.duration);
   });
 
-  // 5. Сверхплавный драг перемотки трека
+  // 5. Плавное перетаскивание ползунка трека
   let isScrubbing = false;
 
-  function setSeekFromClientX(clientX) {
+  function setSeekFromClientX(clientX, immediateVisual = false) {
     const rect = seekSlider.getBoundingClientRect();
     if (rect.width <= 0) return;
     const ratio = (clientX - rect.left) / rect.width;
     const pct = Math.max(0, Math.min(100, ratio * 100));
     targetProgressPercent = pct;
+    if (immediateVisual) {
+      smoothProgressPercent = pct;
+      progressFill.style.width = `${pct.toFixed(3)}%`;
+    }
     seekSlider.value = pct;
 
     if (Number.isFinite(audio.duration) && audio.duration > 0) {
@@ -412,6 +412,8 @@ document.addEventListener('DOMContentLoaded', () => {
   seekSlider.addEventListener('input', () => {
     const pct = parseFloat(seekSlider.value);
     targetProgressPercent = pct;
+    smoothProgressPercent = pct;
+    progressFill.style.width = `${pct.toFixed(3)}%`;
     if (Number.isFinite(audio.duration) && audio.duration > 0) {
       audio.currentTime = (pct / 100) * audio.duration;
       currentTimeEl.textContent = formatTime(audio.currentTime);
@@ -419,21 +421,19 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   seekSlider.addEventListener('pointerdown', (e) => {
+    e.stopPropagation();
     isScrubbing = true;
     progressTrackWrap.classList.add('scrubbing');
     seekSlider.setPointerCapture(e.pointerId);
-    setSeekFromClientX(e.clientX);
-    for (let i = 0; i < 4; i++) {
-      spawnProgressParticle();
-    }
+    setSeekFromClientX(e.clientX, true);
+    spawnProgressParticles(7, true);
   });
 
   seekSlider.addEventListener('pointermove', (e) => {
     if (!isScrubbing) return;
-    setSeekFromClientX(e.clientX);
-    for (let i = 0; i < 3; i++) {
-      spawnProgressParticle();
-    }
+    e.stopPropagation();
+    setSeekFromClientX(e.clientX, true);
+    spawnProgressParticles(6, true);
   });
 
   function endScrub(e) {
@@ -472,7 +472,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // 7. Частички вдоль ползунка прогресса и ползунка громкости
+  // 7. Частицы у ползунка прогресса и громкости (включая чёрные частицы)
   const pCanvas = document.getElementById('progress-particles');
   const pCtx = pCanvas.getContext('2d');
   const barParticles = [];
@@ -504,24 +504,48 @@ document.addEventListener('DOMContentLoaded', () => {
     resizeVolCanvas();
   });
 
-  const particleColors = ['#38bdf8', '#818cf8', '#f472b6', '#ffffff'];
+  const particlePalette = [
+    { color: '#09090b', isBlack: true },
+    { color: '#111114', isBlack: true },
+    { color: '#38bdf8', isBlack: false },
+    { color: '#818cf8', isBlack: false },
+    { color: '#f472b6', isBlack: false },
+    { color: '#ffffff', isBlack: false }
+  ];
 
-  function spawnProgressParticle() {
+  function spawnProgressParticles(count = 1, boosting = false) {
     const rect = pCanvas.getBoundingClientRect();
     if (rect.width <= 0) return;
-    const thumbX = ((rect.width - 14) * (smoothProgressPercent / 100)) + 7;
+
+    // Привязка строго к положению ползунка внутри progress-particles
+    const insetPad = 10;
+    const usableWidth = Math.max(1, rect.width - insetPad * 2);
+    const thumbX = insetPad + usableWidth * (smoothProgressPercent / 100);
     const centerY = rect.height / 2;
 
-    barParticles.push({
-      x: thumbX + (Math.random() - 0.5) * 6,
-      y: centerY + (Math.random() - 0.5) * 4,
-      vx: (Math.random() - 0.85) * 1.15,
-      vy: (Math.random() - 0.5) * 1.4 - 0.25,
-      size: Math.random() * 2.2 + 1,
-      alpha: 0.95,
-      decay: Math.random() * 0.022 + 0.018,
-      color: particleColors[Math.floor(Math.random() * particleColors.length)]
-    });
+    for (let i = 0; i < count; i++) {
+      // 45% вероятности создать чёрную частицу
+      const pickBlack = Math.random() < 0.45;
+      const chosen = pickBlack
+        ? particlePalette[Math.random() < 0.5 ? 0 : 1]
+        : particlePalette[2 + Math.floor(Math.random() * 4)];
+
+      const spread = boosting ? 12 : 6;
+      const angle = Math.random() * Math.PI * 2;
+      const speed = boosting ? (Math.random() * 1.1 + 0.35) : (Math.random() * 0.45 + 0.12);
+
+      barParticles.push({
+        x: thumbX + (Math.random() - 0.5) * spread,
+        y: centerY + (Math.random() - 0.5) * (boosting ? 9 : 5),
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - (boosting ? 0.25 : 0.15),
+        size: chosen.isBlack ? (Math.random() * 2.1 + 1.35) : (Math.random() * 2.1 + 1.0),
+        alpha: 0.98,
+        decay: boosting ? (Math.random() * 0.02 + 0.015) : (Math.random() * 0.024 + 0.018),
+        color: chosen.color,
+        isBlack: chosen.isBlack
+      });
+    }
   }
 
   function spawnVolumeBurst(count = 2) {
@@ -531,17 +555,43 @@ document.addEventListener('DOMContentLoaded', () => {
     const yPos = rect.height / 2;
 
     for (let i = 0; i < count; i++) {
+      const isBlack = Math.random() < 0.42;
+      const color = isBlack
+        ? '#09090b'
+        : particlePalette[2 + Math.floor(Math.random() * 4)].color;
+
       volParticles.push({
-        x: xPos + (Math.random() - 0.5) * 5,
-        y: yPos + (Math.random() - 0.5) * 4,
-        vx: (Math.random() - 0.5) * 1.1,
-        vy: -Math.random() * 1.2 - 0.3,
-        size: Math.random() * 1.9 + 0.9,
-        alpha: 0.95,
-        decay: Math.random() * 0.028 + 0.02,
-        color: particleColors[Math.floor(Math.random() * particleColors.length)]
+        x: xPos + (Math.random() - 0.5) * 6,
+        y: yPos + (Math.random() - 0.5) * 5,
+        vx: (Math.random() - 0.5) * 0.85,
+        vy: (Math.random() - 0.5) * 0.9 - 0.2,
+        size: isBlack ? (Math.random() * 1.8 + 1.2) : (Math.random() * 1.8 + 0.9),
+        alpha: 0.96,
+        decay: Math.random() * 0.026 + 0.018,
+        color,
+        isBlack
       });
     }
+  }
+
+  function drawParticleItem(ctxTarget, pt) {
+    ctxTarget.save();
+    ctxTarget.globalAlpha = Math.max(0, pt.alpha);
+    ctxTarget.fillStyle = pt.color;
+    if (pt.isBlack) {
+      ctxTarget.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+      ctxTarget.lineWidth = 0.75;
+    } else {
+      ctxTarget.shadowBlur = 6;
+      ctxTarget.shadowColor = pt.color;
+    }
+    ctxTarget.beginPath();
+    ctxTarget.arc(pt.x, pt.y, pt.size, 0, Math.PI * 2);
+    ctxTarget.fill();
+    if (pt.isBlack) {
+      ctxTarget.stroke();
+    }
+    ctxTarget.restore();
   }
 
   function renderSlidersAndParticles(timeMs = 0) {
@@ -559,24 +609,27 @@ document.addEventListener('DOMContentLoaded', () => {
     // CAVA-полоски
     renderCavaBars(timeMs);
 
-    // Сверхплавная интерполяция прогресса
-    const progFactor = isScrubbing ? 0.42 : 0.16;
+    // Плавная интерполяция прогресса
+    const progFactor = isScrubbing ? 0.65 : 0.18;
     smoothProgressPercent += (targetProgressPercent - smoothProgressPercent) * progFactor;
     progressFill.style.width = `${smoothProgressPercent.toFixed(3)}%`;
 
-    // Сверхплавная интерполяция громкости
-    const volFactor = isVolumeDragging ? 0.32 : 0.14;
+    // Плавная интерполяция громкости
+    const volFactor = isVolumeDragging ? 0.35 : 0.15;
     smoothVolumePercent += (targetVolumePercent - smoothVolumePercent) * volFactor;
     volumeFill.style.width = `${smoothVolumePercent.toFixed(3)}%`;
     volumeThumb.style.left = `${smoothVolumePercent.toFixed(3)}%`;
 
-    // Частицы прогресса
+    // Частицы прогресса: больше частиц при перетаскивании
     const pRect = pCanvas.getBoundingClientRect();
     pCtx.clearRect(0, 0, pRect.width, pRect.height);
 
-    const progActive = !audio.paused || isScrubbing || progressTrackWrap.matches(':hover');
-    if (progActive && Math.random() < 0.75) {
-      spawnProgressParticle();
+    if (isScrubbing) {
+      spawnProgressParticles(3, true);
+    } else if (!audio.paused || progressTrackWrap.matches(':hover')) {
+      if (Math.random() < 0.75) {
+        spawnProgressParticles(1, false);
+      }
     }
 
     for (let i = barParticles.length - 1; i >= 0; i--) {
@@ -588,15 +641,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (pt.alpha <= 0) {
         barParticles.splice(i, 1);
       } else {
-        pCtx.save();
-        pCtx.globalAlpha = Math.max(0, pt.alpha);
-        pCtx.fillStyle = pt.color;
-        pCtx.shadowBlur = 6;
-        pCtx.shadowColor = pt.color;
-        pCtx.beginPath();
-        pCtx.arc(pt.x, pt.y, pt.size, 0, Math.PI * 2);
-        pCtx.fill();
-        pCtx.restore();
+        drawParticleItem(pCtx, pt);
       }
     }
 
@@ -605,7 +650,7 @@ document.addEventListener('DOMContentLoaded', () => {
     vCtx.clearRect(0, 0, vRect.width, vRect.height);
 
     if (volumeControl.classList.contains('open') && (isVolumeDragging || Math.random() < 0.35)) {
-      spawnVolumeBurst(1);
+      spawnVolumeBurst(isVolumeDragging ? 2 : 1);
     }
 
     for (let i = volParticles.length - 1; i >= 0; i--) {
@@ -617,15 +662,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (vp.alpha <= 0) {
         volParticles.splice(i, 1);
       } else {
-        vCtx.save();
-        vCtx.globalAlpha = Math.max(0, vp.alpha);
-        vCtx.fillStyle = vp.color;
-        vCtx.shadowBlur = 5;
-        vCtx.shadowColor = vp.color;
-        vCtx.beginPath();
-        vCtx.arc(vp.x, vp.y, vp.size, 0, Math.PI * 2);
-        vCtx.fill();
-        vCtx.restore();
+        drawParticleItem(vCtx, vp);
       }
     }
 
