@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>sekailauren — Bio</title>
   <link rel="stylesheet" href="style.css">
 </head>
@@ -11,26 +11,28 @@
   <div id="hacker-scanlines" class="hacker-scanlines" aria-hidden="true"></div>
   <div id="copy-toast" class="copy-toast" role="status" aria-live="polite">Скопировано</div>
 
-  <!-- Переключатель акцентной темы -->
-  <div id="theme-switcher" class="theme-switcher" aria-label="Выбор акцентного цвета">
-    <button type="button" class="theme-dot active" data-accent="neon" title="Neon" aria-label="Тема Neon"></button>
-    <button type="button" class="theme-dot" data-accent="ice" title="Ice" aria-label="Тема Ice"></button>
-    <button type="button" class="theme-dot" data-accent="hacker" title="Hacker" aria-label="Тема Hacker"></button>
-    <button type="button" class="theme-dot" data-accent="lofi" title="Lo-Fi" aria-label="Тема Lo-Fi"></button>
+  <!-- Верхняя панель статуса: темы и просмотры -->
+  <div class="top-utility-bar">
+    <div id="theme-switcher" class="theme-switcher" aria-label="Выбор акцентного цвета">
+      <button type="button" class="theme-dot active" data-accent="neon" title="Neon" aria-label="Тема Neon"></button>
+      <button type="button" class="theme-dot" data-accent="ice" title="Ice" aria-label="Тема Ice"></button>
+      <button type="button" class="theme-dot" data-accent="hacker" title="Hacker" aria-label="Тема Hacker"></button>
+      <button type="button" class="theme-dot" data-accent="lofi" title="Lo-Fi" aria-label="Тема Lo-Fi"></button>
+    </div>
+
+    <div id="views-badge" class="views-badge" title="Уникальные просмотры страницы">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+        <circle cx="12" cy="12" r="3"></circle>
+      </svg>
+      <span id="views-count">—</span>
+    </div>
   </div>
 
   <button id="blizzard-badge" class="blizzard-badge" type="button" aria-label="Остановить метель">
     <kbd>Q</kbd>
-    <span>чтобы остановить</span>
+    <span>остановить метель</span>
   </button>
-
-  <div id="views-badge" class="views-badge" title="Уникальные просмотры страницы">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-      <circle cx="12" cy="12" r="3"></circle>
-    </svg>
-    <span id="views-count">—</span>
-  </div>
 
   <div id="entry-screen" class="entry-overlay">
     <button id="enter-btn" class="entry-text" type="button">
@@ -38,9 +40,9 @@
     </button>
   </div>
 
-  <header class="top-player-wrap" aria-label="Аудиоплеер">
+  <header class="top-player-wrap" aria-label="Аудиоплеер SoundCloud">
     <div id="top-player" class="top-player">
-      <audio id="audio-element" src="track.mp3" preload="metadata" crossorigin="anonymous"></audio>
+      <audio id="audio-element" src="track.mp3" preload="none" crossorigin="anonymous"></audio>
       <iframe
         id="sc-widget-iframe"
         class="sc-hidden-iframe"
@@ -49,16 +51,24 @@
         src="https://w.soundcloud.com/player/?url=https%3A//soundcloud.com/kawaimonster87/sets/relaxing&auto_play=false&visual=false">
       </iframe>
 
-      <img id="player-cover-img" class="top-player-cover" src="cover.jpg" alt="Обложка трека">
+      <a id="sc-cover-link" class="top-player-cover-link" href="https://soundcloud.com/kawaimonster87/sets/relaxing" target="_blank" rel="noopener" title="Открыть в SoundCloud">
+        <img id="player-cover-img" class="top-player-cover" src="cover.jpg" alt="Обложка трека">
+        <span class="sc-corner-badge" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M11.56 8.87V17h8.76c1.85 0 3.35-1.67 3.35-3.73 0-1.94-1.33-3.53-3.03-3.71-.42-2.55-2.46-4.49-4.92-4.49-1.78 0-3.34 1.02-4.16 2.54zm-2.1 1.38c-.41 0-.75.34-.75.75v5.25c0 .41.34.75.75.75s.75-.34.75-.75V11c0-.41-.34-.75-.75-.75zm-2.4 1.35c-.41 0-.75.34-.75.75v3.9c0 .41.34.75.75.75s.75-.34.75-.75v-3.9c0-.41-.34-.75-.75-.75zm-2.4 1.2c-.41 0-.75.34-.75.75v2.7c0 .41.34.75.75.75s.75-.34.75-.75v-2.7c0-.41-.34-.75-.75-.75zm-2.4 1.1c-.41 0-.75.34-.75.75v1.6c0 .41.34.75.75.75s.75-.34.75-.75v-1.6c0-.41-.34-.75-.75-.75z"/>
+          </svg>
+        </span>
+      </a>
 
       <div class="top-player-main">
         <div class="top-player-header">
           <div class="title-and-cava">
-            <span id="player-track-title" class="top-player-title">relaxing playlist</span>
-            <canvas id="cava-canvas" class="cava-canvas" width="54" height="16" aria-hidden="true"></canvas>
+            <a id="player-track-title" class="top-player-title" href="https://soundcloud.com/kawaimonster87/sets/relaxing" target="_blank" rel="noopener">SoundCloud · загрузка...</a>
+            <span id="sc-track-counter" class="sc-track-counter" title="Трек в плейлисте">1/—</span>
+            <canvas id="cava-canvas" class="cava-canvas" width="46" height="14" aria-hidden="true"></canvas>
           </div>
           <span class="top-player-time">
-            <span id="current-time">00:00</span> / <span id="duration-time">00:00</span>
+            <span id="current-time">00:00</span>/<span id="duration-time">00:00</span>
           </span>
         </div>
 
@@ -132,18 +142,19 @@
         <rect x="6" y="2" width="12" height="20" rx="6"></rect>
         <line class="wheel-scroll-dot" x1="12" y1="6" x2="12" y2="10"></line>
       </svg>
-      <svg class="wheel-mouse-icon mobile-only-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M12 5v14"></path>
-        <polyline points="8 9 12 5 16 9"></polyline>
-        <polyline points="8 15 12 19 16 15"></polyline>
-      </svg>
       <span id="wheel-hint-label">Колёсико</span>
     </div>
 
     <div class="tab-dots-pill">
-      <button type="button" class="tab-dot active" data-tab="0" aria-label="Профиль и ссылки"></button>
-      <button type="button" class="tab-dot" data-tab="1" aria-label="Мини-игра Динозаврик"></button>
-      <button type="button" class="tab-dot" data-tab="2" aria-label="Lo-Fi и виниловый диск"></button>
+      <button type="button" class="tab-dot active" data-tab="0" aria-label="Профиль и ссылки">
+        <span class="tab-dot-label">Профиль</span>
+      </button>
+      <button type="button" class="tab-dot" data-tab="1" aria-label="Мини-игра Динозаврик">
+        <span class="tab-dot-label">Dino</span>
+      </button>
+      <button type="button" class="tab-dot" data-tab="2" aria-label="Lo-Fi и виниловый диск">
+        <span class="tab-dot-label">Lo-Fi</span>
+      </button>
     </div>
   </aside>
 
@@ -219,27 +230,75 @@
       </nav>
     </section>
 
-    <!-- Вкладка 2: Dino Run -->
-    <section id="tab-dino" class="tab-panel" aria-label="Мини-игра Динозаврик">
-      <div id="dino-card" class="dino-card">
-        <div class="dino-header">
-          <div class="dino-title-group">
-            <span class="dino-title">DINO RUN</span>
-            <span id="dino-subtitle" class="dino-subtitle">Space / ↑ — прыжок · ↓ — присесть</span>
+    <!-- Вкладка 2: Dino Run + Магазин рядом -->
+    <section id="tab-dino" class="tab-panel" aria-label="Мини-игра Динозаврик и магазин">
+      <div class="dino-layout">
+        <div id="dino-card" class="dino-card">
+          <div class="dino-header">
+            <div class="dino-title-group">
+              <span class="dino-title">DINO RUN</span>
+              <span id="dino-subtitle" class="dino-subtitle">Space / ↑ — прыжок · ↓ — присесть</span>
+            </div>
+            <div class="dino-scores">
+              <span class="dino-coins-pill" title="Монеты для магазина">🪙 <strong id="dino-coins">0</strong></span>
+              <span>HI <strong id="dino-best">0000</strong></span>
+              <span id="dino-score">0000</span>
+            </div>
           </div>
-          <div class="dino-scores">
-            <span>HI <strong id="dino-best">0000</strong></span>
-            <span id="dino-score">0000</span>
+
+          <div id="dino-stage" class="dino-stage">
+            <canvas id="dino-canvas" width="380" height="175"></canvas>
+            <div id="dino-overlay-msg" class="dino-overlay-msg">
+              <span id="dino-msg-title">Нажми Space или кликни</span>
+              <span id="dino-msg-sub">Собирай монетки и трать их в магазине рядом</span>
+            </div>
+          </div>
+
+          <!-- Удобные мобильные кнопки управления для игры -->
+          <div class="dino-mobile-controls" aria-label="Мобильное управление игрой">
+            <button id="dino-btn-jump" type="button" class="dino-ctrl-btn">↑ Прыжок</button>
+            <button id="dino-btn-duck" type="button" class="dino-ctrl-btn">↓ Присесть</button>
           </div>
         </div>
 
-        <div id="dino-stage" class="dino-stage">
-          <canvas id="dino-canvas" width="380" height="175"></canvas>
-          <div id="dino-overlay-msg" class="dino-overlay-msg">
-            <span id="dino-msg-title">Нажми Space или кликни</span>
-            <span id="dino-msg-sub">Перепрыгивай кактусы и уклоняйся от птиц</span>
+        <aside id="dino-shop" class="dino-shop" aria-label="Магазин предметов для динозаврика">
+          <div class="dino-shop-header">
+            <span class="dino-shop-title">МАГАЗИН</span>
+            <span class="dino-shop-hint">Кликни, чтобы купить или надеть</span>
           </div>
-        </div>
+
+          <div class="dino-shop-grid">
+            <button type="button" class="shop-item" data-item="cap" data-cost="15">
+              <span class="shop-item-icon">🧢</span>
+              <span class="shop-item-name">Кепка</span>
+              <span class="shop-item-price">15 🪙</span>
+            </button>
+
+            <button type="button" class="shop-item" data-item="scarf" data-cost="20">
+              <span class="shop-item-icon">🧣</span>
+              <span class="shop-item-name">Шарф</span>
+              <span class="shop-item-price">20 🪙</span>
+            </button>
+
+            <button type="button" class="shop-item" data-item="shield" data-cost="25">
+              <span class="shop-item-icon">🛡️</span>
+              <span class="shop-item-name">Щит (1x)</span>
+              <span class="shop-item-price">25 🪙</span>
+            </button>
+
+            <button type="button" class="shop-item" data-item="magnet" data-cost="35">
+              <span class="shop-item-icon">🧲</span>
+              <span class="shop-item-name">Магнит</span>
+              <span class="shop-item-price">35 🪙</span>
+            </button>
+
+            <button type="button" class="shop-item shop-item-wide" data-item="doubleJump" data-cost="50">
+              <span class="shop-item-icon">🌀</span>
+              <span class="shop-item-name">Двойной прыжок + сальто</span>
+              <span class="shop-item-price">50 🪙</span>
+            </button>
+          </div>
+        </aside>
       </div>
     </section>
 
@@ -274,7 +333,7 @@
             <div id="vinyl-disc" class="vinyl-disc">
               <div class="vinyl-sheen"></div>
               <div class="vinyl-label">
-                <img src="cover.jpg" alt="Обложка диска">
+                <img id="vinyl-cover-img" src="cover.jpg" alt="Обложка диска">
               </div>
               <div class="vinyl-spindle"></div>
             </div>

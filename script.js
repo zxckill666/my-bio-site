@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
     copyToast.textContent = text;
     copyToast.classList.add('show');
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => copyToast.classList.remove('show'), 1500);
+    toastTimer = setTimeout(() => copyToast.classList.remove('show'), 1600);
   }
 
   function copyToClipboard(val) {
@@ -64,21 +64,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const isMobileUa = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
     const isCoarsePointer = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
     const isNarrowScreen = window.innerWidth <= 768;
-    const isMobile = Boolean(isMobileUa || (isCoarsePointer && isNarrowScreen));
+    const isMobile = Boolean(isMobileUa || (isCoarsePointer && isNarrowScreen) || window.innerWidth <= 640);
 
     document.documentElement.classList.toggle('is-mobile', isMobile);
     document.documentElement.classList.toggle('is-desktop', !isMobile);
     document.body.classList.toggle('is-mobile', isMobile);
     document.body.classList.toggle('is-desktop', !isMobile);
 
-    const wheelHintLabel = document.getElementById('wheel-hint-label');
     const dinoSubtitle = document.getElementById('dino-subtitle');
     const dinoMsgTitle = document.getElementById('dino-msg-title');
 
-    if (wheelHintLabel) wheelHintLabel.textContent = isMobile ? 'Свайп' : 'Колёсико';
     if (dinoSubtitle) {
       dinoSubtitle.textContent = isMobile
-        ? 'Тап — прыжок · Удержание — присесть'
+        ? 'Кнопки снизу или тап по полю'
         : 'Space / ↑ — прыжок · ↓ — присесть';
     }
     if (dinoMsgTitle) {
@@ -92,11 +90,14 @@ document.addEventListener('DOMContentLoaded', () => {
     isMobileDevice = detectDeviceEnvironment();
   });
 
-  // Плеер + SoundCloud плейлист (с fallback на track.mp3)
+  // SoundCloud Playlist Player (исправленная синхронизация без багов)
   const audio = document.getElementById('audio-element');
   const scIframe = document.getElementById('sc-widget-iframe');
+  const scCoverLink = document.getElementById('sc-cover-link');
   const playerCoverImg = document.getElementById('player-cover-img');
+  const vinylCoverImg = document.getElementById('vinyl-cover-img');
   const playerTrackTitle = document.getElementById('player-track-title');
+  const scTrackCounter = document.getElementById('sc-track-counter');
   const topPlayer = document.getElementById('top-player');
   const prevTrackBtn = document.getElementById('prev-track-btn');
   const nextTrackBtn = document.getElementById('next-track-btn');
@@ -128,15 +129,38 @@ document.addEventListener('DOMContentLoaded', () => {
   let scPlaying = false;
   let scDurationMs = 0;
   let scPositionMs = 0;
-  let useLocalFallback = false;
+  let scTotalTracks = 0;
+  let sourceMode = 'sc'; // 'sc' | 'local'
+  let pendingEnterPlay = false;
+  let fallbackPlayTimer = null;
+  let trackSwitchLock = false;
 
   function formatTime(sec) {
     if (!Number.isFinite(sec) || sec < 0) return '00:00';
     return `${String(Math.floor(sec / 60)).padStart(2, '0')}:${String(Math.floor(sec % 60)).padStart(2, '0')}`;
   }
 
+  function stopLocalAudio() {
+    try {
+      audio.pause();
+      audio.currentTime = 0;
+    } catch (_) {}
+  }
+
+  function setActiveSource(mode) {
+    sourceMode = mode;
+    if (mode === 'sc') {
+      stopLocalAudio();
+    } else if (scWidget && scReady) {
+      try {
+        scWidget.pause();
+      } catch (_) {}
+      scPlaying = false;
+    }
+  }
+
   function isAnyPlaying() {
-    return useLocalFallback ? !audio.paused : scPlaying;
+    return sourceMode === 'local' ? !audio.paused : scPlaying;
   }
 
   function syncPlayState() {
@@ -145,22 +169,46 @@ document.addEventListener('DOMContentLoaded', () => {
     iconPause.classList.toggle('hidden-icon', !playing);
   }
 
-  function syncMuteState() {
-    const isMutedNow = useLocalFallback
+  function syncMuteIsMuted() {
+    return sourceMode === 'local'
       ? (audio.muted || audio.volume <= 0.025)
       : (parseFloat(volumeSlider.value) <= 0.025);
+  }
+
+  function syncMuteState() {
+    const isMutedNow = syncMuteIsMuted();
     iconSoundOn.classList.toggle('hidden-icon', isMutedNow);
     iconSoundOff.classList.toggle('hidden-icon', !isMutedNow);
   }
 
   function syncScTrackMeta() {
     if (!scWidget || !scReady) return;
+
+    scWidget.getSounds((sounds) => {
+      if (Array.isArray(sounds) && sounds.length > 0) {
+        scTotalTracks = sounds.length;
+      }
+      scWidget.getCurrentSoundIndex((idx) => {
+        if (scTrackCounter && typeof idx === 'number' && scTotalTracks > 0) {
+          scTrackCounter.textContent = `${idx + 1}/${scTotalTracks}`;
+        }
+      });
+    });
+
     scWidget.getCurrentSound((sound) => {
       if (!sound) return;
-      if (sound.title && playerTrackTitle) playerTrackTitle.textContent = sound.title;
+      if (sound.title && playerTrackTitle) {
+        playerTrackTitle.textContent = sound.title;
+      }
+      if (sound.permalink_url) {
+        if (playerTrackTitle) playerTrackTitle.href = sound.permalink_url;
+        if (scCoverLink) scCoverLink.href = sound.permalink_url;
+      }
       const art = sound.artwork_url || sound.user?.avatar_url;
-      if (art && playerCoverImg) {
-        playerCoverImg.src = art.replace('-large.jpg', '-t200x200.jpg');
+      if (art) {
+        const cleanArt = art.replace('-large.jpg', '-t200x200.jpg');
+        if (playerCoverImg) playerCoverImg.src = cleanArt;
+        if (vinylCoverImg) vinylCoverImg.src = cleanArt;
       }
       if (typeof sound.duration === 'number' && sound.duration > 0) {
         scDurationMs = sound.duration;
@@ -171,31 +219,53 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function initSoundCloudPlaylist() {
     if (!window.SC || !window.SC.Widget || !scIframe) {
-      useLocalFallback = true;
+      setActiveSource('local');
+      if (playerTrackTitle) playerTrackTitle.textContent = 'local track';
+      if (scTrackCounter) scTrackCounter.textContent = '1/1';
       return;
     }
+
     try {
       scWidget = window.SC.Widget(scIframe);
+
       scWidget.bind(window.SC.Widget.Events.READY, () => {
         scReady = true;
+        setActiveSource('sc');
         scWidget.setVolume(lastNonZeroVolume * 100);
         syncScTrackMeta();
+
+        if (pendingEnterPlay) {
+          pendingEnterPlay = false;
+          clearTimeout(fallbackPlayTimer);
+          scWidget.play();
+        }
       });
+
       scWidget.bind(window.SC.Widget.Events.PLAY, () => {
+        clearTimeout(fallbackPlayTimer);
+        setActiveSource('sc');
         scPlaying = true;
         syncScTrackMeta();
         syncPlayState();
       });
+
       scWidget.bind(window.SC.Widget.Events.PAUSE, () => {
-        scPlaying = false;
-        syncPlayState();
+        if (sourceMode === 'sc') {
+          scPlaying = false;
+          syncPlayState();
+        }
       });
+
       scWidget.bind(window.SC.Widget.Events.FINISH, () => {
-        scPlaying = false;
-        syncPlayState();
+        if (sourceMode === 'sc') {
+          scPlaying = false;
+          syncPlayState();
+          setTimeout(syncScTrackMeta, 220);
+        }
       });
+
       scWidget.bind(window.SC.Widget.Events.PLAY_PROGRESS, (data) => {
-        if (isScrubbing) return;
+        if (sourceMode !== 'sc' || !scPlaying || isScrubbing) return;
         scPositionMs = data?.currentPosition || 0;
         if (scDurationMs > 0) {
           currentTimeEl.textContent = formatTime(scPositionMs / 1000);
@@ -204,34 +274,85 @@ document.addEventListener('DOMContentLoaded', () => {
           seekSlider.value = targetProgressPercent;
         }
       });
+
       scWidget.bind(window.SC.Widget.Events.ERROR, () => {
-        if (!scPlaying) useLocalFallback = true;
+        scPlaying = false;
+        if (!scReady) {
+          setActiveSource('local');
+          if (playerTrackTitle) playerTrackTitle.textContent = 'local track';
+          if (scTrackCounter) scTrackCounter.textContent = '1/1';
+          if (pendingEnterPlay) {
+            pendingEnterPlay = false;
+            initAudioAnalyser();
+            audio.play().catch(() => {});
+          }
+        }
+        syncPlayState();
       });
     } catch (_) {
-      useLocalFallback = true;
+      setActiveSource('local');
     }
   }
   initSoundCloudPlaylist();
 
   function startPlayback() {
-    if (!useLocalFallback && scWidget && scReady) {
+    if (scWidget && scReady) {
+      setActiveSource('sc');
       scWidget.play();
-      scPlaying = true;
-      syncPlayState();
       return;
     }
-    initAudioAnalyser();
-    audio.play().catch(() => {});
+
+    pendingEnterPlay = true;
+    clearTimeout(fallbackPlayTimer);
+    fallbackPlayTimer = setTimeout(() => {
+      if (!pendingEnterPlay) return;
+      pendingEnterPlay = false;
+      setActiveSource('local');
+      if (playerTrackTitle) playerTrackTitle.textContent = 'local track';
+      if (scTrackCounter) scTrackCounter.textContent = '1/1';
+      initAudioAnalyser();
+      audio.play().catch(() => {});
+    }, 2400);
   }
 
   function pausePlayback() {
-    if (!useLocalFallback && scWidget && scReady) {
+    pendingEnterPlay = false;
+    clearTimeout(fallbackPlayTimer);
+    if (sourceMode === 'sc' && scWidget && scReady) {
       scWidget.pause();
       scPlaying = false;
       syncPlayState();
       return;
     }
     audio.pause();
+    syncPlayState();
+  }
+
+  function switchScTrack(direction) {
+    if (trackSwitchLock) return;
+    trackSwitchLock = true;
+    setTimeout(() => { trackSwitchLock = false; }, 280);
+
+    if (scWidget && scReady) {
+      setActiveSource('sc');
+      scPositionMs = 0;
+      targetProgressPercent = 0;
+      smoothProgressPercent = 0;
+      progressFill.style.width = '0%';
+      currentTimeEl.textContent = '00:00';
+
+      if (direction === 'prev') scWidget.prev();
+      else scWidget.next();
+
+      setTimeout(() => {
+        syncScTrackMeta();
+        scWidget.play();
+      }, 180);
+    } else {
+      setActiveSource('local');
+      audio.currentTime = 0;
+      audio.play().catch(() => {});
+    }
   }
 
   function applyVolumeValue(val) {
@@ -252,27 +373,8 @@ document.addEventListener('DOMContentLoaded', () => {
     spawnVolumeBurst(3);
   }
 
-  if (prevTrackBtn) {
-    prevTrackBtn.addEventListener('click', () => {
-      if (!useLocalFallback && scWidget && scReady) {
-        scWidget.prev();
-        setTimeout(syncScTrackMeta, 250);
-      } else {
-        audio.currentTime = 0;
-      }
-    });
-  }
-
-  if (nextTrackBtn) {
-    nextTrackBtn.addEventListener('click', () => {
-      if (!useLocalFallback && scWidget && scReady) {
-        scWidget.next();
-        setTimeout(syncScTrackMeta, 250);
-      } else {
-        audio.currentTime = 0;
-      }
-    });
-  }
+  if (prevTrackBtn) prevTrackBtn.addEventListener('click', () => switchScTrack('prev'));
+  if (nextTrackBtn) nextTrackBtn.addEventListener('click', () => switchScTrack('next'));
 
   // Discord Lanyard
   const DISCORD_USER_ID = '1378047204119547989';
@@ -632,7 +734,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   if (blizzardBadge) blizzardBadge.addEventListener('click', stopBlizzard);
 
-  // Переключение вкладок + пружинный отклик + реакция снега
+  // Переключение вкладок
   let onTabSwitchedEffect = null;
   const tabPanels = [
     document.getElementById('tab-profile'),
@@ -678,7 +780,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   window.addEventListener('wheel', (e) => {
-    if (!isEntered || Math.abs(e.deltaY) < 12) return;
+    if (!isEntered || isMobileDevice || Math.abs(e.deltaY) < 12) return;
     const now = Date.now();
     if (now - lastWheelSwitchTime < 460) return;
     lastWheelSwitchTime = now;
@@ -686,46 +788,102 @@ document.addEventListener('DOMContentLoaded', () => {
     switchTab(activeTabIndex + dir, dir);
   }, { passive: true });
 
-  let touchStartY = null;
-  window.addEventListener('touchstart', (e) => {
-    if (e.touches.length === 1) touchStartY = e.touches[0].clientY;
-  }, { passive: true });
-
-  window.addEventListener('touchend', (e) => {
-    if (!isEntered || touchStartY === null || e.changedTouches.length === 0) return;
-    const diffY = touchStartY - e.changedTouches[0].clientY;
-    touchStartY = null;
-    if (Math.abs(diffY) > 55) {
-      const dir = diffY > 0 ? 1 : -1;
-      switchTab(activeTabIndex + dir, dir);
-    }
-  }, { passive: true });
-
-  // Мини-игра Dino Run
+  // Мини-игра Dino Run + Магазин (без неона)
   const dinoCard = document.getElementById('dino-card');
   const dinoStage = document.getElementById('dino-stage');
   const dinoCanvas = document.getElementById('dino-canvas');
   const dinoCtx = dinoCanvas.getContext('2d');
   const dinoScoreEl = document.getElementById('dino-score');
   const dinoBestEl = document.getElementById('dino-best');
+  const dinoCoinsEl = document.getElementById('dino-coins');
   const dinoOverlayMsg = document.getElementById('dino-overlay-msg');
   const dinoMsgTitle = document.getElementById('dino-msg-title');
   const dinoMsgSub = document.getElementById('dino-msg-sub');
+  const shopButtons = document.querySelectorAll('.shop-item');
+  const dinoBtnJump = document.getElementById('dino-btn-jump');
+  const dinoBtnDuck = document.getElementById('dino-btn-duck');
 
   const DINO_BEST_KEY = 'sekailauren_dino_best_v1';
+  const DINO_SAVE_KEY = 'sekailauren_dino_shop_v1';
+
   let dinoBest = parseInt(localStorage.getItem(DINO_BEST_KEY) || '0', 10) || 0;
   dinoBestEl.textContent = String(dinoBest).padStart(4, '0');
 
+  let shopSave = {
+    coins: 20,
+    owned: {},
+    equipped: {}
+  };
+  try {
+    const parsed = JSON.parse(localStorage.getItem(DINO_SAVE_KEY) || 'null');
+    if (parsed && typeof parsed === 'object') {
+      shopSave.coins = typeof parsed.coins === 'number' ? Math.max(0, Math.floor(parsed.coins)) : 20;
+      shopSave.owned = parsed.owned && typeof parsed.owned === 'object' ? parsed.owned : {};
+      shopSave.equipped = parsed.equipped && typeof parsed.equipped === 'object' ? parsed.equipped : {};
+    }
+  } catch (_) {}
+
+  function saveShopState() {
+    localStorage.setItem(DINO_SAVE_KEY, JSON.stringify(shopSave));
+  }
+
+  function renderShopUI() {
+    if (dinoCoinsEl) dinoCoinsEl.textContent = String(shopSave.coins);
+    shopButtons.forEach((btn) => {
+      const itemId = btn.getAttribute('data-item');
+      const cost = parseInt(btn.getAttribute('data-cost') || '0', 10);
+      const priceEl = btn.querySelector('.shop-item-price');
+      const isOwned = Boolean(shopSave.owned[itemId]);
+      const isEquipped = Boolean(shopSave.equipped[itemId]);
+
+      btn.classList.toggle('equipped', isEquipped);
+      if (isOwned) {
+        btn.disabled = false;
+        if (priceEl) priceEl.textContent = isEquipped ? 'Надето' : 'Надеть';
+      } else {
+        btn.disabled = shopSave.coins < cost;
+        if (priceEl) priceEl.textContent = `${cost} 🪙`;
+      }
+    });
+  }
+
+  shopButtons.forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const itemId = btn.getAttribute('data-item');
+      const cost = parseInt(btn.getAttribute('data-cost') || '0', 10);
+      if (!itemId) return;
+
+      if (shopSave.owned[itemId]) {
+        shopSave.equipped[itemId] = !shopSave.equipped[itemId];
+        saveShopState();
+        renderShopUI();
+        return;
+      }
+
+      if (shopSave.coins >= cost) {
+        shopSave.coins -= cost;
+        shopSave.owned[itemId] = true;
+        shopSave.equipped[itemId] = true;
+        saveShopState();
+        renderShopUI();
+        showCopyToast(`Куплено: ${btn.querySelector('.shop-item-name')?.textContent || itemId}`);
+      }
+    });
+  });
+
+  renderShopUI();
+
   let dinoW = 380;
-  let dinoH = 175;
-  const GROUND_OFFSET = 26;
+  let dinoH = 170;
+  const GROUND_OFFSET = 25;
 
   function resizeDinoCanvas() {
     if (!dinoCanvas) return;
     const rect = dinoStage.getBoundingClientRect();
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    dinoW = Math.max(260, Math.floor(rect.width || 380));
-    dinoH = Math.max(150, Math.floor(rect.height || 175));
+    dinoW = Math.max(250, Math.floor(rect.width || 380));
+    dinoH = Math.max(150, Math.floor(rect.height || 170));
     dinoCanvas.width = Math.floor(dinoW * dpr);
     dinoCanvas.height = Math.floor(dinoH * dpr);
     dinoCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -755,17 +913,22 @@ document.addEventListener('DOMContentLoaded', () => {
       if (type === 'jump') {
         osc.frequency.setValueAtTime(280, now);
         osc.frequency.exponentialRampToValueAtTime(560, now + 0.09);
-        gain.gain.setValueAtTime(0.035, now);
+        gain.gain.setValueAtTime(0.03, now);
         gain.gain.exponentialRampToValueAtTime(0.001, now + 0.095);
+      } else if (type === 'coin') {
+        osc.frequency.setValueAtTime(740, now);
+        osc.frequency.exponentialRampToValueAtTime(1080, now + 0.07);
+        gain.gain.setValueAtTime(0.025, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
       } else if (type === 'milestone') {
         osc.frequency.setValueAtTime(587, now);
         osc.frequency.setValueAtTime(880, now + 0.07);
-        gain.gain.setValueAtTime(0.03, now);
+        gain.gain.setValueAtTime(0.028, now);
         gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
       } else {
         osc.frequency.setValueAtTime(190, now);
         osc.frequency.exponentialRampToValueAtTime(65, now + 0.22);
-        gain.gain.setValueAtTime(0.045, now);
+        gain.gain.setValueAtTime(0.04, now);
         gain.gain.exponentialRampToValueAtTime(0.001, now + 0.23);
       }
       osc.connect(gain);
@@ -786,15 +949,29 @@ document.addEventListener('DOMContentLoaded', () => {
     running: false,
     gameOver: false,
     score: 0,
+    combo: 0,
     lastMilestone: 0,
     beatRecordThisRun: false,
     speed: 4.5,
     groundScroll: 0,
     nextSpawnFrames: 60,
     nightFactor: 0,
-    player: { x: 42, y: 0, w: 22, h: 26, vy: 0, grounded: true, ducking: false },
+    shieldCharges: 0,
+    player: {
+      x: 42,
+      y: 0,
+      w: 24,
+      h: 28,
+      vy: 0,
+      grounded: true,
+      ducking: false,
+      jumpsUsed: 0,
+      flipAngle: 0
+    },
     obstacles: [],
-    dust: []
+    coinsList: [],
+    dust: [],
+    popups: []
   };
 
   function spawnDinoDust(x, y, count = 5) {
@@ -804,27 +981,39 @@ document.addEventListener('DOMContentLoaded', () => {
         y: y - Math.random() * 3,
         vx: -Math.random() * 1.6 - 0.5,
         vy: -Math.random() * 1.1 - 0.2,
-        alpha: 0.75,
+        alpha: 0.7,
         size: Math.random() * 2 + 1
       });
     }
+  }
+
+  function spawnPopup(x, y, text, color = '#fde047') {
+    dinoState.popups.push({ x, y, vy: -1.1, text, color, alpha: 1 });
   }
 
   function resetDinoGame() {
     dinoState.running = true;
     dinoState.gameOver = false;
     dinoState.score = 0;
+    dinoState.combo = 0;
     dinoState.lastMilestone = 0;
     dinoState.beatRecordThisRun = false;
     dinoState.speed = 4.5;
     dinoState.obstacles = [];
+    dinoState.coinsList = [];
     dinoState.dust = [];
+    dinoState.popups = [];
     dinoState.nextSpawnFrames = 52;
+    dinoState.shieldCharges = shopSave.equipped.shield ? 1 : 0;
+
     dinoState.player.ducking = false;
-    dinoState.player.h = 26;
+    dinoState.player.h = 28;
     dinoState.player.y = dinoH - GROUND_OFFSET - dinoState.player.h;
     dinoState.player.vy = 0;
     dinoState.player.grounded = true;
+    dinoState.player.jumpsUsed = 0;
+    dinoState.player.flipAngle = 0;
+
     dinoScoreEl.textContent = '0000';
     dinoOverlayMsg.classList.add('hidden-msg');
   }
@@ -835,12 +1024,24 @@ document.addEventListener('DOMContentLoaded', () => {
       resetDinoGame();
       return;
     }
-    if (dinoState.player.grounded) {
-      dinoState.player.ducking = false;
-      dinoState.player.h = 26;
-      dinoState.player.vy = -8.9;
-      dinoState.player.grounded = false;
-      spawnDinoDust(dinoState.player.x + 4, dinoH - GROUND_OFFSET, 6);
+    const p = dinoState.player;
+    const maxJumps = shopSave.equipped.doubleJump ? 2 : 1;
+
+    if (p.grounded) {
+      p.ducking = false;
+      p.h = 28;
+      p.vy = -8.8;
+      p.grounded = false;
+      p.jumpsUsed = 1;
+      p.flipAngle = 0;
+      spawnDinoDust(p.x + 4, dinoH - GROUND_OFFSET, 6);
+      playDinoSound('jump');
+    } else if (p.jumpsUsed < maxJumps) {
+      p.ducking = false;
+      p.vy = -7.8;
+      p.jumpsUsed += 1;
+      p.flipAngle = 0.05;
+      spawnDinoDust(p.x + 8, p.y + p.h, 7);
       playDinoSound('jump');
     }
   }
@@ -849,26 +1050,41 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!dinoState.running || dinoState.gameOver) return;
     dinoState.player.ducking = isDucking;
     if (!dinoState.player.grounded && isDucking) {
-      dinoState.player.vy = Math.max(dinoState.player.vy, 7.5);
+      dinoState.player.vy = Math.max(dinoState.player.vy, 7.6);
     }
   }
 
-  let dinoTouchHoldTimer = null;
   dinoStage.addEventListener('pointerdown', (e) => {
     e.stopPropagation();
     if (!dinoState.running || dinoState.gameOver) {
       resetDinoGame();
       return;
     }
-    if (e.pointerType === 'touch' || e.pointerType === 'pen') {
-      clearTimeout(dinoTouchHoldTimer);
-      dinoTouchHoldTimer = setTimeout(() => setDinoDuck(true), 170);
-    }
     triggerDinoJump();
   });
 
-  dinoStage.addEventListener('pointerup', () => { clearTimeout(dinoTouchHoldTimer); setDinoDuck(false); });
-  dinoStage.addEventListener('pointercancel', () => { clearTimeout(dinoTouchHoldTimer); setDinoDuck(false); });
+  if (dinoBtnJump) {
+    dinoBtnJump.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      triggerDinoJump();
+    });
+  }
+
+  if (dinoBtnDuck) {
+    dinoBtnDuck.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!dinoState.running || dinoState.gameOver) {
+        resetDinoGame();
+        return;
+      }
+      setDinoDuck(true);
+    });
+    dinoBtnDuck.addEventListener('pointerup', () => setDinoDuck(false));
+    dinoBtnDuck.addEventListener('pointercancel', () => setDinoDuck(false));
+    dinoBtnDuck.addEventListener('pointerleave', () => setDinoDuck(false));
+  }
 
   window.addEventListener('keydown', (e) => {
     if (e.code === 'KeyQ' || e.key === 'q' || e.key === 'Q' || e.key === 'й' || e.key === 'Й') {
@@ -895,33 +1111,132 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.code === 'ArrowDown' || e.code === 'KeyS') setDinoDuck(false);
   });
 
+  // Моделька динозаврика без неона
   function drawDinoCharacter(p, timeMs) {
     dinoCtx.save();
-    dinoCtx.fillStyle = '#f3f4f6';
-    if (p.ducking && p.grounded) {
-      dinoCtx.beginPath();
-      dinoCtx.roundRect(p.x - 4, p.y + 4, p.w + 7, 11, 4);
-      dinoCtx.roundRect(p.x + p.w - 2, p.y + 3, 11, 9, 3);
-      dinoCtx.fill();
-      dinoCtx.fillStyle = '#09090b';
-      dinoCtx.fillRect(p.x + p.w + 4, p.y + 5, 2.2, 2.2);
-      dinoCtx.fillStyle = '#d1d5db';
-      const step = dinoState.running ? Math.sin(timeMs * 0.03) * 2.2 : 0;
-      dinoCtx.fillRect(p.x + 2, p.y + 14 + step, 4, 4 - step);
-      dinoCtx.fillRect(p.x + 11, p.y + 14 - step, 4, 4 + step);
-    } else {
-      dinoCtx.beginPath();
-      dinoCtx.roundRect(p.x, p.y + 7, p.w - 4, p.h - 11, 4);
-      dinoCtx.roundRect(p.x + 7, p.y, p.w - 7, 12, 4);
-      dinoCtx.roundRect(p.x - 5, p.y + 11, 7, 6, 2);
-      dinoCtx.fill();
-      dinoCtx.fillStyle = '#09090b';
-      dinoCtx.fillRect(p.x + p.w - 6, p.y + 3, 2.5, 2.5);
-      dinoCtx.fillStyle = '#d1d5db';
-      const step = dinoState.running && p.grounded ? Math.sin(timeMs * 0.026) * 2.5 : 0;
-      dinoCtx.fillRect(p.x + 3, p.y + p.h - 5 + step, 4, 5 - step);
-      dinoCtx.fillRect(p.x + 11, p.y + p.h - 5 - step, 4, 5 + step);
+
+    const bodyColor = '#e5e7eb';
+    const bellyColor = '#cbd5e1';
+    const outlineColor = '#3f3f46';
+
+    const cx = p.x + p.w * 0.5;
+    const cy = p.y + p.h * 0.5;
+
+    if (p.flipAngle > 0 && !p.grounded) {
+      dinoCtx.translate(cx, cy);
+      dinoCtx.rotate(p.flipAngle);
+      dinoCtx.translate(-cx, -cy);
     }
+
+    const tailWag = Math.sin(timeMs * 0.018) * (dinoState.running ? 3.2 : 1.0);
+
+    if (shopSave.equipped.scarf) {
+      const wave = Math.sin(timeMs * 0.024) * 3.5;
+      dinoCtx.fillStyle = '#dc2626';
+      dinoCtx.beginPath();
+      dinoCtx.moveTo(p.x + 12, p.y + 8);
+      dinoCtx.lineTo(p.x - 9, p.y + 6 + wave);
+      dinoCtx.lineTo(p.x - 11, p.y + 11 + wave * 0.8);
+      dinoCtx.lineTo(p.x + 10, p.y + 12);
+      dinoCtx.closePath();
+      dinoCtx.fill();
+    }
+
+    if (p.ducking && p.grounded) {
+      dinoCtx.fillStyle = bodyColor;
+      dinoCtx.strokeStyle = outlineColor;
+      dinoCtx.lineWidth = 1.2;
+      dinoCtx.beginPath();
+      dinoCtx.roundRect(p.x - 6, p.y + 4, p.w + 8, 11, 5);
+      dinoCtx.fill();
+      dinoCtx.stroke();
+
+      dinoCtx.beginPath();
+      dinoCtx.moveTo(p.x - 5, p.y + 7);
+      dinoCtx.lineTo(p.x - 14, p.y + 5 + tailWag * 0.5);
+      dinoCtx.lineTo(p.x - 5, p.y + 12);
+      dinoCtx.closePath();
+      dinoCtx.fill();
+
+      dinoCtx.beginPath();
+      dinoCtx.roundRect(p.x + p.w - 4, p.y + 3, 13, 10, 4);
+      dinoCtx.fill();
+      dinoCtx.stroke();
+
+      if (shopSave.equipped.cap) {
+        dinoCtx.fillStyle = '#2563eb';
+        dinoCtx.beginPath();
+        dinoCtx.roundRect(p.x + p.w - 3, p.y, 11, 4, 2);
+        dinoCtx.fill();
+        dinoCtx.fillRect(p.x + p.w + 4, p.y + 2, 7, 2);
+      }
+
+      dinoCtx.fillStyle = '#09090b';
+      dinoCtx.fillRect(p.x + p.w + 5, p.y + 5, 2.2, 2.2);
+
+      dinoCtx.fillStyle = bellyColor;
+      const step = dinoState.running ? Math.sin(timeMs * 0.032) * 2.4 : 0;
+      dinoCtx.fillRect(p.x + 1, p.y + 14 + step, 4, 4 - step);
+      dinoCtx.fillRect(p.x + 12, p.y + 14 - step, 4, 4 + step);
+    } else {
+      dinoCtx.fillStyle = bodyColor;
+      dinoCtx.beginPath();
+      dinoCtx.moveTo(p.x + 2, p.y + 12);
+      dinoCtx.lineTo(p.x - 10, p.y + 8 + tailWag);
+      dinoCtx.lineTo(p.x - 7, p.y + 15 + tailWag * 0.6);
+      dinoCtx.lineTo(p.x + 3, p.y + 20);
+      dinoCtx.closePath();
+      dinoCtx.fill();
+
+      dinoCtx.fillStyle = '#a1a1aa';
+      dinoCtx.fillRect(p.x + 5, p.y + 8, 3, 3);
+      dinoCtx.fillRect(p.x + 9, p.y + 7, 3, 3);
+
+      dinoCtx.fillStyle = bodyColor;
+      dinoCtx.strokeStyle = outlineColor;
+      dinoCtx.lineWidth = 1.2;
+      dinoCtx.beginPath();
+      dinoCtx.roundRect(p.x + 1, p.y + 9, p.w - 6, p.h - 14, 5);
+      dinoCtx.roundRect(p.x + 9, p.y + 3, 8, 12, 3);
+      dinoCtx.roundRect(p.x + 8, p.y - 1, 14, 10, 4);
+      dinoCtx.fill();
+      dinoCtx.stroke();
+
+      dinoCtx.fillStyle = bellyColor;
+      dinoCtx.fillRect(p.x + p.w - 6, p.y + 16, 4, 3);
+
+      if (shopSave.equipped.cap) {
+        dinoCtx.fillStyle = '#2563eb';
+        dinoCtx.beginPath();
+        dinoCtx.roundRect(p.x + 8, p.y - 4, 13, 4, 2);
+        dinoCtx.fill();
+        dinoCtx.fillRect(p.x + 16, p.y - 2, 8, 2);
+      }
+
+      const isBlinking = !dinoState.gameOver && Math.sin(timeMs * 0.0032) > 0.985;
+      dinoCtx.fillStyle = '#09090b';
+      if (dinoState.gameOver) {
+        dinoCtx.fillRect(p.x + 16, p.y + 2, 3.5, 1.5);
+      } else if (isBlinking) {
+        dinoCtx.fillRect(p.x + 16, p.y + 3, 3.5, 1.2);
+      } else {
+        dinoCtx.fillRect(p.x + 16, p.y + 2, 2.5, 2.5);
+      }
+
+      dinoCtx.fillStyle = bellyColor;
+      const runPhase = dinoState.running && p.grounded ? Math.sin(timeMs * 0.028) * 2.8 : 0;
+      dinoCtx.fillRect(p.x + 4, p.y + p.h - 6 + runPhase, 4, 6 - runPhase);
+      dinoCtx.fillRect(p.x + 12, p.y + p.h - 6 - runPhase, 4, 6 + runPhase);
+    }
+
+    if (dinoState.shieldCharges > 0) {
+      dinoCtx.strokeStyle = '#38bdf8';
+      dinoCtx.lineWidth = 1.6;
+      dinoCtx.beginPath();
+      dinoCtx.arc(cx + 1, cy, Math.max(p.w, p.h) * 0.62, 0, Math.PI * 2);
+      dinoCtx.stroke();
+    }
+
     dinoCtx.restore();
   }
 
@@ -966,6 +1281,20 @@ document.addEventListener('DOMContentLoaded', () => {
     dinoCtx.restore();
   }
 
+  function drawCoin(cn) {
+    dinoCtx.save();
+    dinoCtx.fillStyle = '#eab308';
+    dinoCtx.strokeStyle = '#ca8a04';
+    dinoCtx.lineWidth = 1.2;
+    dinoCtx.beginPath();
+    dinoCtx.arc(cn.x, cn.y, cn.r, 0, Math.PI * 2);
+    dinoCtx.fill();
+    dinoCtx.stroke();
+    dinoCtx.fillStyle = '#fef08a';
+    dinoCtx.fillRect(cn.x - 1, cn.y - 3, 2, 6);
+    dinoCtx.restore();
+  }
+
   function stepAndRenderDino(timeMs) {
     dinoCtx.clearRect(0, 0, dinoW, dinoH);
     const groundY = dinoH - GROUND_OFFSET;
@@ -990,7 +1319,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const p = dinoState.player;
-    p.h = p.ducking && p.grounded ? 16 : 26;
+    p.h = p.ducking && p.grounded ? 16 : 28;
     if (!dinoState.running && !dinoState.gameOver) p.y = groundY - p.h;
 
     dinoCtx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
@@ -1012,37 +1341,85 @@ document.addEventListener('DOMContentLoaded', () => {
       const wasAirborne = !p.grounded;
       p.vy += 0.45;
       p.y += p.vy;
+      if (p.flipAngle > 0 && !p.grounded) {
+        p.flipAngle += 0.22;
+      }
       if (p.y >= groundY - p.h) {
         p.y = groundY - p.h;
         p.vy = 0;
         p.grounded = true;
-        if (wasAirborne) spawnDinoDust(p.x + 6, groundY, 5);
+        p.jumpsUsed = 0;
+        p.flipAngle = 0;
+        if (wasAirborne) {
+          spawnDinoDust(p.x + 6, groundY, 5);
+          dinoState.combo += 1;
+          if (dinoState.combo > 0 && dinoState.combo % 5 === 0) {
+            spawnPopup(p.x + 12, p.y - 8, `COMBO x${dinoState.combo}!`, '#93c5fd');
+          }
+        }
       }
 
       dinoState.nextSpawnFrames -= 1;
       if (dinoState.nextSpawnFrames <= 0) {
         const canSpawnBird = dinoState.score >= 120 && Math.random() < 0.3;
         if (canSpawnBird) {
+          const birdY = Math.random() < 0.55 ? groundY - 35 : groundY - 22;
           dinoState.obstacles.push({
             kind: 'bird',
             x: dinoW + 14,
-            y: Math.random() < 0.55 ? groundY - 34 : groundY - 21,
+            y: birdY,
             w: 24,
             h: 18,
             phase: Math.random() * Math.PI * 2
           });
+          if (Math.random() < 0.65) {
+            dinoState.coinsList.push({ x: dinoW + 26, y: birdY - 18, r: 5.5 });
+          }
         } else {
           const isDouble = dinoState.score >= 80 && Math.random() < 0.28;
           const h = 22 + Math.floor(Math.random() * 13);
+          const cactusX = dinoW + 12;
+          const cactusW = isDouble ? 25 : (14 + Math.floor(Math.random() * 6));
           dinoState.obstacles.push({
             kind: 'cactus',
-            x: dinoW + 12,
+            x: cactusX,
             y: groundY - h,
-            w: isDouble ? 25 : (14 + Math.floor(Math.random() * 6)),
+            w: cactusW,
             h
           });
+          if (Math.random() < 0.72) {
+            dinoState.coinsList.push({ x: cactusX + cactusW * 0.5, y: groundY - h - 24, r: 5.5 });
+          }
         }
-        dinoState.nextSpawnFrames = Math.max(42, Math.floor(70 + Math.random() * 45 - dinoState.speed * 2));
+        dinoState.nextSpawnFrames = Math.max(44, Math.floor(72 + Math.random() * 44 - dinoState.speed * 2));
+      }
+
+      const pCenterX = p.x + p.w * 0.5;
+      const pCenterY = p.y + p.h * 0.5;
+      for (let i = dinoState.coinsList.length - 1; i >= 0; i--) {
+        const cn = dinoState.coinsList[i];
+        cn.x -= dinoState.speed;
+
+        if (shopSave.equipped.magnet) {
+          const dx = pCenterX - cn.x;
+          const dy = pCenterY - cn.y;
+          const dist = Math.hypot(dx, dy);
+          if (dist < 115 && dist > 1) {
+            cn.x += (dx / dist) * 4.2;
+            cn.y += (dy / dist) * 4.2;
+          }
+        }
+
+        if (Math.abs(pCenterX - cn.x) < p.w * 0.65 + cn.r && Math.abs(pCenterY - cn.y) < p.h * 0.65 + cn.r) {
+          shopSave.coins += 1;
+          saveShopState();
+          renderShopUI();
+          playDinoSound('coin');
+          spawnPopup(cn.x, cn.y - 6, '+1 🪙', '#fde047');
+          dinoState.coinsList.splice(i, 1);
+          continue;
+        }
+        if (cn.x < -16) dinoState.coinsList.splice(i, 1);
       }
 
       for (let i = dinoState.obstacles.length - 1; i >= 0; i--) {
@@ -1056,8 +1433,19 @@ document.addEventListener('DOMContentLoaded', () => {
           p.y + pad < ob.y + ob.h - pad &&
           p.y + p.h - pad > ob.y + pad
         ) {
+          if (dinoState.shieldCharges > 0) {
+            dinoState.shieldCharges -= 1;
+            shopSave.equipped.shield = false;
+            saveShopState();
+            renderShopUI();
+            spawnPopup(p.x + 10, p.y - 10, 'ЩИТ СПАС!', '#38bdf8');
+            dinoState.obstacles.splice(i, 1);
+            continue;
+          }
+
           dinoState.gameOver = true;
           dinoState.running = false;
+          dinoState.combo = 0;
           playDinoSound('hit');
           triggerDinoCardEffect('hit-shake', 250);
           const finalScore = Math.floor(dinoState.score);
@@ -1070,7 +1458,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
           }
           dinoMsgTitle.textContent = `Игра окончена · Счёт: ${finalScore}`;
-          dinoMsgSub.textContent = isMobileDevice ? 'Тапни по экрану, чтобы сыграть снова' : 'Нажми Space или кликни, чтобы сыграть снова';
+          dinoMsgSub.textContent = isMobileDevice ? 'Нажми на экран или «Прыжок», чтобы сыграть снова' : 'Нажми Space или кликни, чтобы сыграть снова';
           dinoOverlayMsg.classList.remove('hidden-msg');
         }
         if (ob.x + ob.w < -15) dinoState.obstacles.splice(i, 1);
@@ -1102,12 +1490,30 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
+    for (let i = 0; i < dinoState.coinsList.length; i++) drawCoin(dinoState.coinsList[i]);
     for (let i = 0; i < dinoState.obstacles.length; i++) {
       const ob = dinoState.obstacles[i];
       if (ob.kind === 'bird') drawBird(ob, timeMs);
       else drawCactus(ob);
     }
+
     drawDinoCharacter(p, timeMs);
+
+    for (let i = dinoState.popups.length - 1; i >= 0; i--) {
+      const pop = dinoState.popups[i];
+      pop.y += pop.vy;
+      pop.alpha -= 0.022;
+      if (pop.alpha <= 0) {
+        dinoState.popups.splice(i, 1);
+      } else {
+        dinoCtx.save();
+        dinoCtx.globalAlpha = pop.alpha;
+        dinoCtx.font = 'bold 10.5px Consolas, monospace';
+        dinoCtx.fillStyle = pop.color;
+        dinoCtx.fillText(pop.text, pop.x, pop.y);
+        dinoCtx.restore();
+      }
+    }
   }
 
   // Сбоящий виниловый диск на 3-й вкладке
@@ -1176,7 +1582,7 @@ document.addEventListener('DOMContentLoaded', () => {
     vinylDisc.style.transform = `translate3d(${offsetX.toFixed(1)}px, ${offsetY.toFixed(1)}px, 0) scale(${scale}) rotate(${discAngle.toFixed(1)}deg)`;
   }
 
-  // Перетаскивание проигрывателя
+  // Перетаскивание проигрывателя (только на ПК)
   let isPlayerDragging = false;
   let playerDragOffsetX = 0;
   let playerDragOffsetY = 0;
@@ -1196,7 +1602,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   topPlayer.addEventListener('pointerdown', (e) => {
-    if (isMobileDevice || e.target.closest('button, input, .progress-track-wrap, .volume-drawer')) return;
+    if (isMobileDevice || e.target.closest('button, input, a, .progress-track-wrap, .volume-drawer')) return;
     if (e.button !== undefined && e.button !== 0 && e.pointerType === 'mouse') return;
     const rect = topPlayer.getBoundingClientRect();
     if (!playerPosInitialized) {
@@ -1229,10 +1635,10 @@ document.addEventListener('DOMContentLoaded', () => {
   topPlayer.addEventListener('pointerup', stopPlayerDrag);
   topPlayer.addEventListener('pointercancel', stopPlayerDrag);
 
-  // CAVA эквалайзер + реакция басов на тему/фон
+  // CAVA эквалайзер
   const cavaCanvas = document.getElementById('cava-canvas');
   const cavaCtx = cavaCanvas.getContext('2d');
-  const CAVA_BARS = 8;
+  const CAVA_BARS = 7;
   const cavaLevels = new Array(CAVA_BARS).fill(0.15);
   let smoothBass = 0;
 
@@ -1244,7 +1650,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let hasRealAudio = false;
     let bassRaw = 0;
 
-    if (useLocalFallback && analyser && freqData && playingNow) {
+    if (sourceMode === 'local' && analyser && freqData && playingNow) {
       analyser.getByteFrequencyData(freqData);
       for (let i = 0; i < freqData.length; i++) {
         if (freqData[i] > 6) { hasRealAudio = true; break; }
@@ -1261,7 +1667,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.body.style.setProperty('--bass-energy', smoothBass.toFixed(3));
 
     const styles = getComputedStyle(document.body);
-    const c1 = styles.getPropertyValue('--accent-1').trim() || '#38bdf8';
+    const c1 = '#ff5500';
     const c2 = styles.getPropertyValue('--accent-2').trim() || '#818cf8';
     const c3 = styles.getPropertyValue('--accent-3').trim() || '#f472b6';
 
@@ -1294,10 +1700,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  function syncMuteIsMuted() {
-    return useLocalFallback ? (audio.muted || audio.volume <= 0.025) : (parseFloat(volumeSlider.value) <= 0.025);
-  }
-
   let volumeCloseTimer = null;
   let isVolumeDragging = false;
   function openVolumeDrawer() {
@@ -1309,18 +1711,30 @@ document.addEventListener('DOMContentLoaded', () => {
     clearTimeout(volumeCloseTimer);
     volumeCloseTimer = setTimeout(() => { if (!isVolumeDragging) volumeControl.classList.remove('open'); }, 340);
   }
-  volumeControl.addEventListener('mouseenter', openVolumeDrawer);
-  volumeControl.addEventListener('mouseleave', scheduleCloseVolumeDrawer);
+  volumeControl.addEventListener('mouseenter', () => { if (!isMobileDevice) openVolumeDrawer(); });
+  volumeControl.addEventListener('mouseleave', () => { if (!isMobileDevice) scheduleCloseVolumeDrawer(); });
 
   playPauseBtn.addEventListener('click', () => {
     if (isAnyPlaying()) pausePlayback();
     else startPlayback();
   });
 
-  muteBtn.addEventListener('click', () => {
-    if (!isMobileDevice) openVolumeDrawer();
+  muteBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (isMobileDevice) {
+      volumeControl.classList.toggle('open');
+      if (volumeControl.classList.contains('open')) resizeVolCanvas();
+      return;
+    }
+    openVolumeDrawer();
     if (syncMuteIsMuted()) applyVolumeValue(lastNonZeroVolume > 0.05 ? lastNonZeroVolume : 0.75);
     else { lastNonZeroVolume = parseFloat(volumeSlider.value) || 0.75; applyVolumeValue(0); }
+  });
+
+  document.addEventListener('pointerdown', (e) => {
+    if (isMobileDevice && volumeControl.classList.contains('open') && !volumeControl.contains(e.target)) {
+      volumeControl.classList.remove('open');
+    }
   });
 
   volumeSlider.addEventListener('input', () => { openVolumeDrawer(); applyVolumeValue(parseFloat(volumeSlider.value)); });
@@ -1340,7 +1754,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!isVolumeDragging) return;
     isVolumeDragging = false;
     if (volumeSlider.hasPointerCapture(e.pointerId)) volumeSlider.releasePointerCapture(e.pointerId);
-    scheduleCloseVolumeDrawer();
+    if (!isMobileDevice) scheduleCloseVolumeDrawer();
   }
   volumeSlider.addEventListener('pointerup', stopVolumeDrag);
   volumeSlider.addEventListener('pointercancel', stopVolumeDrag);
@@ -1349,7 +1763,7 @@ document.addEventListener('DOMContentLoaded', () => {
   audio.addEventListener('pause', syncPlayState);
   audio.addEventListener('ended', () => { audio.currentTime = 0; targetProgressPercent = 0; syncPlayState(); });
   audio.addEventListener('loadedmetadata', () => {
-    if (useLocalFallback) durationTimeEl.textContent = formatTime(audio.duration);
+    if (sourceMode === 'local') durationTimeEl.textContent = formatTime(audio.duration);
   });
 
   let isScrubbing = false;
@@ -1363,7 +1777,7 @@ document.addEventListener('DOMContentLoaded', () => {
       progressFill.style.width = `${pct.toFixed(3)}%`;
     }
     seekSlider.value = pct;
-    if (!useLocalFallback && scWidget && scReady && scDurationMs > 0) {
+    if (sourceMode === 'sc' && scWidget && scReady && scDurationMs > 0) {
       const targetMs = (pct / 100) * scDurationMs;
       scWidget.seekTo(targetMs);
       currentTimeEl.textContent = formatTime(targetMs / 1000);
@@ -1374,7 +1788,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   audio.addEventListener('timeupdate', () => {
-    if (!useLocalFallback || isScrubbing) return;
+    if (sourceMode !== 'local' || isScrubbing) return;
     currentTimeEl.textContent = formatTime(audio.currentTime);
     if (Number.isFinite(audio.duration) && audio.duration > 0) {
       durationTimeEl.textContent = formatTime(audio.duration);
@@ -1388,7 +1802,7 @@ document.addEventListener('DOMContentLoaded', () => {
     targetProgressPercent = pct;
     smoothProgressPercent = pct;
     progressFill.style.width = `${pct.toFixed(3)}%`;
-    if (!useLocalFallback && scWidget && scReady && scDurationMs > 0) {
+    if (sourceMode === 'sc' && scWidget && scReady && scDurationMs > 0) {
       const targetMs = (pct / 100) * scDurationMs;
       scWidget.seekTo(targetMs);
       currentTimeEl.textContent = formatTime(targetMs / 1000);
@@ -1461,8 +1875,9 @@ document.addEventListener('DOMContentLoaded', () => {
   resizeVolCanvas();
   window.addEventListener('resize', () => { resizeBarCanvas(); resizeVolCanvas(); });
 
-  const particleColors = ['#38bdf8', '#818cf8', '#f472b6', '#ffffff'];
+  const particleColors = ['#ff5500', '#818cf8', '#f472b6', '#ffffff'];
   function spawnProgressParticles(count = 1, boosting = false) {
+    if (isMobileDevice && !boosting) return;
     const rect = pCanvas.getBoundingClientRect();
     if (rect.width <= 0) return;
     const thumbX = 10 + Math.max(1, rect.width - 20) * (smoothProgressPercent / 100);
@@ -1485,6 +1900,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function spawnVolumeBurst(count = 2) {
+    if (isMobileDevice) return;
     const rect = vCanvas.getBoundingClientRect();
     if (rect.width <= 0) return;
     const xPos = ((rect.width - 18) * (smoothVolumePercent / 100)) + 9;
@@ -1503,7 +1919,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function renderSlidersAndParticles(timeMs = 0) {
-    if (playerPosInitialized) {
+    if (playerPosInitialized && !isMobileDevice) {
       const posFactor = isPlayerDragging ? 0.36 : 0.16;
       currentPlayerX += (targetPlayerX - currentPlayerX) * posFactor;
       currentPlayerY += (targetPlayerY - currentPlayerY) * posFactor;
@@ -1512,7 +1928,7 @@ document.addEventListener('DOMContentLoaded', () => {
       topPlayer.style.top = `${currentPlayerY.toFixed(2)}px`;
       topPlayer.style.margin = '0';
     }
-    renderCavaBars(timeMs);
+    if (!isMobileDevice) renderCavaBars(timeMs);
     if (activeTabIndex === 1) stepAndRenderDino(timeMs);
     else if (activeTabIndex === 2) stepAndRenderVinylDisc(timeMs);
 
@@ -1588,9 +2004,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const ambientSnow = [];
   const blizzardSnow = [];
   const cursorSnow = [];
-  const BASE_AMBIENT_COUNT = isMobileDevice ? 55 : 80;
-  const MAX_BLIZZARD_COUNT = isMobileDevice ? 85 : 145;
-  const MAX_CURSOR_SNOW = 90;
+  const BASE_AMBIENT_COUNT = isMobileDevice ? 45 : 80;
+  const MAX_BLIZZARD_COUNT = isMobileDevice ? 70 : 145;
+  const MAX_CURSOR_SNOW = isMobileDevice ? 45 : 90;
 
   const TAB_SNOW_DENSITY = [1.0, 1.25, 0.75];
   let tabDensityTarget = TAB_SNOW_DENSITY[0];
@@ -1601,7 +2017,7 @@ document.addEventListener('DOMContentLoaded', () => {
     tabDensityTarget = TAB_SNOW_DENSITY[tabIdx] ?? 1.0;
     tabGustBoost = 1.0;
     spawnProgressParticles(6, true);
-    const burstCount = isMobileDevice ? 8 : 14;
+    const burstCount = isMobileDevice ? 6 : 14;
     for (let i = 0; i < burstCount; i++) {
       if (cursorSnow.length >= MAX_CURSOR_SNOW) cursorSnow.shift();
       const angle = Math.random() * Math.PI * 2;
@@ -1656,11 +2072,11 @@ document.addEventListener('DOMContentLoaded', () => {
   let lastCursorSpawnMs = 0;
   function spawnCursorFlakes(x, y, force = false) {
     const now = performance.now();
-    if (!force && now - lastCursorSpawnMs < 22) return;
+    if (!force && now - lastCursorSpawnMs < 24) return;
     lastCursorSpawnMs = now;
 
     const isBlizzard = blizzardCurrentIntensity > 0.15;
-    const count = isBlizzard ? Math.min(5, Math.round(2 + blizzardCurrentIntensity * 3)) : 2;
+    const count = isBlizzard ? Math.min(4, Math.round(2 + blizzardCurrentIntensity * 2)) : 2;
     for (let i = 0; i < count; i++) {
       if (cursorSnow.length >= MAX_CURSOR_SNOW) cursorSnow.shift();
       cursorSnow.push({
@@ -1708,7 +2124,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const windBoostX = blizzardCurrentIntensity * 4.0 + tabGustBoost * 2.0;
     const windBoostY = 1 + blizzardCurrentIntensity * 2.2 + tabGustBoost * 0.85;
-    const activeAmbientCount = Math.max(25, Math.min(ambientSnow.length, Math.round(BASE_AMBIENT_COUNT * tabDensityCurrent)));
+    const activeAmbientCount = Math.max(20, Math.min(ambientSnow.length, Math.round(BASE_AMBIENT_COUNT * tabDensityCurrent)));
     const streak = blizzardCurrentIntensity * 2.0 + tabGustBoost * 1.0;
 
     for (let i = 0; i < activeAmbientCount; i++) {
