@@ -10,6 +10,12 @@
   <!-- Холст для снежинок на фоне и за курсором -->
   <canvas id="snow-canvas"></canvas>
 
+  <!-- Подсказка остановки пасхалки-метели в нижнем левом углу -->
+  <button id="blizzard-badge" class="blizzard-badge" type="button" aria-label="Остановить метель">
+    <kbd>Q</kbd>
+    <span>чтобы остановить</span>
+  </button>
+
   <!-- Счетчик просмотров с глазиком в правом верхнем углу -->
   <div id="views-badge" class="views-badge" title="Уникальные просмотры страницы">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -112,14 +118,19 @@
     </div>
   </header>
 
-  <!-- Навигация справа: две пульсирующие точки + подсказка с иконкой колесика мыши -->
+  <!-- Навигация справа: две пульсирующие точки + подсказка с иконкой колесика / свайпа -->
   <aside id="tab-nav-rail" class="tab-nav-rail hidden" aria-label="Переключение вкладок">
     <div id="wheel-hint" class="wheel-hint" aria-hidden="true">
-      <svg class="wheel-mouse-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <svg class="wheel-mouse-icon desktop-only-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <rect x="6" y="2" width="12" height="20" rx="6"></rect>
         <line class="wheel-scroll-dot" x1="12" y1="6" x2="12" y2="10"></line>
       </svg>
-      <span>Колёсико</span>
+      <svg class="wheel-mouse-icon mobile-only-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 5v14"></path>
+        <polyline points="8 9 12 5 16 9"></polyline>
+        <polyline points="8 15 12 19 16 15"></polyline>
+      </svg>
+      <span id="wheel-hint-label">Колёсико</span>
     </div>
 
     <div class="tab-dots-pill">
@@ -133,7 +144,7 @@
     <!-- Вкладка 1: Аватарка, Discord профиль/RPC и кнопки ссылок -->
     <section id="tab-profile" class="tab-panel active">
       <header class="profile flip-item" style="--delay: 0.05s;">
-        <img class="avatar-img" src="avatar.jpg" alt="Аватар sekailauren">
+        <img id="main-avatar" class="avatar-img" src="avatar.jpg" alt="Аватар sekailauren">
         <h1>sekailauren</h1>
         <p class="bio">16 y. o. вайбкодер, делаю разные проекты на python, C++.</p>
       </header>
@@ -199,13 +210,13 @@
       </nav>
     </section>
 
-    <!-- Вкладка 2: Лёгкая игра в динозаврика -->
+    <!-- Вкладка 2: Улучшенная игра в динозаврика -->
     <section id="tab-dino" class="tab-panel" aria-label="Мини-игра Динозаврик">
       <div class="dino-card">
         <div class="dino-header">
           <div class="dino-title-group">
             <span class="dino-title">DINO RUN</span>
-            <span class="dino-subtitle">Space / ↑ / Клик — прыжок</span>
+            <span id="dino-subtitle" class="dino-subtitle">Space / ↑ — прыжок · ↓ — присесть</span>
           </div>
           <div class="dino-scores">
             <span>HI <strong id="dino-best">0000</strong></span>
@@ -214,10 +225,10 @@
         </div>
 
         <div id="dino-stage" class="dino-stage">
-          <canvas id="dino-canvas" width="380" height="165"></canvas>
+          <canvas id="dino-canvas" width="380" height="175"></canvas>
           <div id="dino-overlay-msg" class="dino-overlay-msg">
             <span id="dino-msg-title">Нажми Space или кликни</span>
-            <span id="dino-msg-sub">Перепрыгивай кактусы</span>
+            <span id="dino-msg-sub">Перепрыгивай кактусы и уклоняйся от птиц</span>
           </div>
         </div>
       </div>

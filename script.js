@@ -1,4 +1,43 @@
 document.addEventListener('DOMContentLoaded', () => {
+  // -01. Автоопределение устройства (телефон / планшет / ПК)
+  function detectDeviceEnvironment() {
+    const ua = navigator.userAgent || '';
+    const isMobileUa = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+    const isCoarsePointer = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+    const isNarrowScreen = window.innerWidth <= 768;
+    const isMobile = Boolean(isMobileUa || (isCoarsePointer && isNarrowScreen));
+
+    document.documentElement.classList.toggle('is-mobile', isMobile);
+    document.documentElement.classList.toggle('is-desktop', !isMobile);
+    document.body.classList.toggle('is-mobile', isMobile);
+    document.body.classList.toggle('is-desktop', !isMobile);
+
+    const wheelHintLabel = document.getElementById('wheel-hint-label');
+    const dinoSubtitle = document.getElementById('dino-subtitle');
+    const dinoMsgTitle = document.getElementById('dino-msg-title');
+
+    if (wheelHintLabel) {
+      wheelHintLabel.textContent = isMobile ? 'Свайп' : 'Колёсико';
+    }
+    if (dinoSubtitle) {
+      dinoSubtitle.textContent = isMobile
+        ? 'Тап — прыжок · Удержание — присесть'
+        : 'Space / ↑ — прыжок · ↓ — присесть';
+    }
+    if (dinoMsgTitle) {
+      dinoMsgTitle.textContent = isMobile
+        ? 'Нажми на экран, чтобы начать'
+        : 'Нажми Space или кликни';
+    }
+
+    return isMobile;
+  }
+
+  let isMobileDevice = detectDeviceEnvironment();
+  window.addEventListener('resize', () => {
+    isMobileDevice = detectDeviceEnvironment();
+  });
+
   const audio = document.getElementById('audio-element');
   const topPlayer = document.getElementById('top-player');
   const playPauseBtn = document.getElementById('play-pause-btn');
@@ -68,10 +107,9 @@ document.addEventListener('DOMContentLoaded', () => {
     return null;
   }
 
-  // 3D-наклон и подсветка карточки Discord (отключается в оффлайне)
   if (discordCard) {
     discordCard.addEventListener('mousemove', (e) => {
-      if (discordCard.classList.contains('is-offline')) return;
+      if (isMobileDevice || discordCard.classList.contains('is-offline')) return;
       const rect = discordCard.getBoundingClientRect();
       const px = e.clientX - rect.left;
       const py = e.clientY - rect.top;
@@ -91,6 +129,11 @@ document.addEventListener('DOMContentLoaded', () => {
       discordCard.style.setProperty('--dc-rx', '0deg');
       discordCard.style.setProperty('--dc-ry', '0deg');
       discordCard.style.setProperty('--dc-ty', '0px');
+    });
+
+    discordCard.addEventListener('click', () => {
+      if (!isMobileDevice || discordCard.classList.contains('is-offline')) return;
+      discordCard.classList.toggle('mobile-expanded');
     });
   }
 
@@ -162,10 +205,9 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    // Если offline — блокируем раскрытие RPC, показываем только "Не в сети"
     if (isOffline) {
       discordCard.classList.add('is-offline');
-      discordCard.classList.remove('is-tilting');
+      discordCard.classList.remove('is-tilting', 'mobile-expanded');
       discordCard.style.setProperty('--dc-rx', '0deg');
       discordCard.style.setProperty('--dc-ry', '0deg');
       discordCard.style.setProperty('--dc-ty', '0px');
@@ -193,12 +235,13 @@ document.addEventListener('DOMContentLoaded', () => {
       dcCustomBoxEl.classList.add('hidden-icon');
     }
 
+    const actionVerb = isMobileDevice ? 'Нажми' : 'Наведи';
     if (rpcAct) {
       dcSummaryLineEl.textContent = `Играет / активен: ${rpcAct.name}`;
     } else if (hasCustomText) {
-      dcSummaryLineEl.textContent = 'Есть кастомный статус — наведи';
+      dcSummaryLineEl.textContent = `Есть кастомный статус — ${actionVerb.toLowerCase()}`;
     } else {
-      dcSummaryLineEl.textContent = 'Наведи, чтобы посмотреть RPC';
+      dcSummaryLineEl.textContent = `${actionVerb}, чтобы посмотреть RPC`;
     }
 
     if (rpcAct) {
@@ -376,7 +419,59 @@ document.addEventListener('DOMContentLoaded', () => {
     audio.play().catch(() => {});
   });
 
-  // 1.5. Переключение между вкладкой профиля и мини-игрой по колёсику мыши или точкам справа
+  // 1.4. Пасхалка: 5 кликов по аватарке запускают плавную метель, остановка на Q
+  const mainAvatar = document.getElementById('main-avatar');
+  const blizzardBadge = document.getElementById('blizzard-badge');
+  let avatarClickCount = 0;
+  let avatarClickResetTimer = null;
+  let blizzardTargetIntensity = 0;
+  let blizzardCurrentIntensity = 0;
+
+  function startBlizzard() {
+    blizzardTargetIntensity = 1;
+    document.body.classList.add('blizzard-active');
+    if (blizzardBadge) {
+      blizzardBadge.classList.add('visible');
+    }
+  }
+
+  function stopBlizzard() {
+    if (blizzardTargetIntensity === 0 && blizzardCurrentIntensity < 0.01) return;
+    blizzardTargetIntensity = 0;
+    document.body.classList.remove('blizzard-active');
+    if (blizzardBadge) {
+      blizzardBadge.classList.remove('visible');
+    }
+  }
+
+  if (mainAvatar) {
+    mainAvatar.addEventListener('click', () => {
+      avatarClickCount += 1;
+      clearTimeout(avatarClickResetTimer);
+      avatarClickResetTimer = setTimeout(() => {
+        avatarClickCount = 0;
+      }, 1800);
+
+      if (avatarClickCount >= 5) {
+        avatarClickCount = 0;
+        startBlizzard();
+      }
+    });
+  }
+
+  if (blizzardBadge) {
+    blizzardBadge.addEventListener('click', stopBlizzard);
+  }
+
+  window.addEventListener('keydown', (e) => {
+    if (e.code === 'KeyQ' || e.key === 'q' || e.key === 'Q' || e.key === 'й' || e.key === 'Й') {
+      if (blizzardTargetIntensity > 0 || blizzardCurrentIntensity > 0.05) {
+        stopBlizzard();
+      }
+    }
+  });
+
+  // 1.5. Переключение между вкладкой профиля и мини-игрой по колёсику мыши, свайпу или точкам справа
   const tabPanels = [
     document.getElementById('tab-profile'),
     document.getElementById('tab-dino')
@@ -428,7 +523,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }, { passive: true });
 
-  // Свайп вверх/вниз на телефонах для переключения вкладок
   let touchStartY = null;
   window.addEventListener('touchstart', (e) => {
     if (e.touches.length === 1) {
@@ -445,7 +539,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }, { passive: true });
 
-  // 1.6. Лёгкая мини-игра "Динозаврик" (перепрыгивание через кактусы)
+  // 1.6. Улучшенная мини-игра "Динозаврик" (классические зелёные кактусы, приседание, птицы, день/ночь, ретро-звуки)
   const dinoStage = document.getElementById('dino-stage');
   const dinoCanvas = document.getElementById('dino-canvas');
   const dinoCtx = dinoCanvas.getContext('2d');
@@ -460,7 +554,7 @@ document.addEventListener('DOMContentLoaded', () => {
   dinoBestEl.textContent = String(dinoBest).padStart(4, '0');
 
   let dinoW = 380;
-  let dinoH = 165;
+  let dinoH = 175;
   const GROUND_OFFSET = 26;
 
   function resizeDinoCanvas() {
@@ -468,7 +562,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const rect = dinoStage.getBoundingClientRect();
     const dpr = window.devicePixelRatio || 1;
     dinoW = Math.max(260, Math.floor(rect.width || 380));
-    dinoH = Math.max(140, Math.floor(rect.height || 165));
+    dinoH = Math.max(150, Math.floor(rect.height || 175));
     dinoCanvas.width = Math.floor(dinoW * dpr);
     dinoCanvas.height = Math.floor(dinoH * dpr);
     dinoCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -477,31 +571,105 @@ document.addEventListener('DOMContentLoaded', () => {
   resizeDinoCanvas();
   window.addEventListener('resize', resizeDinoCanvas);
 
+  // Лёгкие 8-битные звуки через Web Audio API (без внешних файлов)
+  let sfxCtx = null;
+  function playDinoSound(type) {
+    try {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) return;
+      if (!sfxCtx) sfxCtx = new AudioContextClass();
+      if (sfxCtx.state === 'suspended') sfxCtx.resume().catch(() => {});
+
+      const osc = sfxCtx.createOscillator();
+      const gain = sfxCtx.createGain();
+      osc.type = 'square';
+      const now = sfxCtx.currentTime;
+
+      if (type === 'jump') {
+        osc.frequency.setValueAtTime(280, now);
+        osc.frequency.exponentialRampToValueAtTime(560, now + 0.09);
+        gain.gain.setValueAtTime(0.035, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.095);
+        osc.connect(gain);
+        gain.connect(sfxCtx.destination);
+        osc.start(now);
+        osc.stop(now + 0.1);
+      } else if (type === 'milestone') {
+        osc.frequency.setValueAtTime(587, now);
+        osc.frequency.setValueAtTime(880, now + 0.07);
+        gain.gain.setValueAtTime(0.03, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+        osc.connect(gain);
+        gain.connect(sfxCtx.destination);
+        osc.start(now);
+        osc.stop(now + 0.19);
+      } else if (type === 'hit') {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(190, now);
+        osc.frequency.exponentialRampToValueAtTime(65, now + 0.22);
+        gain.gain.setValueAtTime(0.045, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.23);
+        osc.connect(gain);
+        gain.connect(sfxCtx.destination);
+        osc.start(now);
+        osc.stop(now + 0.24);
+      }
+    } catch (_) {}
+  }
+
+  const dinoStars = Array.from({ length: 16 }, () => ({
+    x: Math.random(),
+    y: Math.random() * 0.55,
+    size: Math.random() * 1.4 + 0.7,
+    phase: Math.random() * Math.PI * 2
+  }));
+
   const dinoState = {
     running: false,
     gameOver: false,
     score: 0,
-    speed: 4.3,
+    lastMilestone: 0,
+    speed: 4.5,
     groundScroll: 0,
-    nextSpawnFrames: 65,
+    nextSpawnFrames: 60,
+    nightFactor: 0,
     player: {
       x: 42,
       y: 0,
       w: 22,
       h: 26,
       vy: 0,
-      grounded: true
+      grounded: true,
+      ducking: false
     },
-    cacti: []
+    obstacles: [],
+    dust: []
   };
+
+  function spawnDinoDust(x, y, count = 5) {
+    for (let i = 0; i < count; i++) {
+      dinoState.dust.push({
+        x: x + Math.random() * 10,
+        y: y - Math.random() * 3,
+        vx: -Math.random() * 1.6 - 0.5,
+        vy: -Math.random() * 1.1 - 0.2,
+        alpha: 0.75,
+        size: Math.random() * 2 + 1
+      });
+    }
+  }
 
   function resetDinoGame() {
     dinoState.running = true;
     dinoState.gameOver = false;
     dinoState.score = 0;
-    dinoState.speed = 4.3;
-    dinoState.cacti = [];
-    dinoState.nextSpawnFrames = 55;
+    dinoState.lastMilestone = 0;
+    dinoState.speed = 4.5;
+    dinoState.obstacles = [];
+    dinoState.dust = [];
+    dinoState.nextSpawnFrames = 52;
+    dinoState.player.ducking = false;
+    dinoState.player.h = 26;
     dinoState.player.y = dinoH - GROUND_OFFSET - dinoState.player.h;
     dinoState.player.vy = 0;
     dinoState.player.grounded = true;
@@ -509,78 +677,167 @@ document.addEventListener('DOMContentLoaded', () => {
     dinoOverlayMsg.classList.add('hidden-msg');
   }
 
-  function triggerDinoAction() {
+  function triggerDinoJump() {
     if (activeTabIndex !== 1) return;
     if (!dinoState.running || dinoState.gameOver) {
       resetDinoGame();
       return;
     }
     if (dinoState.player.grounded) {
-      dinoState.player.vy = -8.7;
+      dinoState.player.ducking = false;
+      dinoState.player.h = 26;
+      dinoState.player.vy = -8.9;
       dinoState.player.grounded = false;
+      spawnDinoDust(dinoState.player.x + 4, dinoH - GROUND_OFFSET, 6);
+      playDinoSound('jump');
     }
   }
 
+  function setDinoDuck(isDucking) {
+    if (!dinoState.running || dinoState.gameOver) return;
+    const p = dinoState.player;
+    p.ducking = isDucking;
+    if (!p.grounded && isDucking) {
+      p.vy = Math.max(p.vy, 7.5);
+    }
+  }
+
+  let dinoTouchHoldTimer = null;
   dinoStage.addEventListener('pointerdown', (e) => {
     e.stopPropagation();
-    triggerDinoAction();
+    if (!dinoState.running || dinoState.gameOver) {
+      resetDinoGame();
+      return;
+    }
+    if (e.pointerType === 'touch' || e.pointerType === 'pen') {
+      clearTimeout(dinoTouchHoldTimer);
+      dinoTouchHoldTimer = setTimeout(() => {
+        setDinoDuck(true);
+      }, 170);
+    }
+    triggerDinoJump();
+  });
+
+  dinoStage.addEventListener('pointerup', () => {
+    clearTimeout(dinoTouchHoldTimer);
+    setDinoDuck(false);
+  });
+
+  dinoStage.addEventListener('pointercancel', () => {
+    clearTimeout(dinoTouchHoldTimer);
+    setDinoDuck(false);
   });
 
   window.addEventListener('keydown', (e) => {
     if (activeTabIndex !== 1) return;
     if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') {
       e.preventDefault();
-      triggerDinoAction();
+      triggerDinoJump();
+    } else if (e.code === 'ArrowDown' || e.code === 'KeyS') {
+      e.preventDefault();
+      setDinoDuck(true);
+    }
+  });
+
+  window.addEventListener('keyup', (e) => {
+    if (e.code === 'ArrowDown' || e.code === 'KeyS') {
+      setDinoDuck(false);
     }
   });
 
   function drawDinoCharacter(p, timeMs) {
     dinoCtx.save();
-    dinoCtx.fillStyle = '#f9fafb';
-    dinoCtx.shadowBlur = 8;
-    dinoCtx.shadowColor = 'rgba(129, 140, 248, 0.55)';
+    dinoCtx.fillStyle = '#f3f4f6';
 
-    // Тело и голова динозаврика
-    dinoCtx.beginPath();
-    dinoCtx.roundRect(p.x, p.y + 7, p.w - 4, p.h - 11, 4);
-    dinoCtx.roundRect(p.x + 7, p.y, p.w - 7, 12, 4);
-    // Хвост
-    dinoCtx.roundRect(p.x - 5, p.y + 11, 7, 6, 2);
-    dinoCtx.fill();
+    if (p.ducking && p.grounded) {
+      // Пригнувшийся динозавр
+      dinoCtx.beginPath();
+      dinoCtx.roundRect(p.x - 4, p.y + 4, p.w + 7, 11, 4);
+      dinoCtx.roundRect(p.x + p.w - 2, p.y + 3, 11, 9, 3);
+      dinoCtx.fill();
 
-    // Глаз
-    dinoCtx.fillStyle = '#09090b';
-    dinoCtx.fillRect(p.x + p.w - 6, p.y + 3, 2.5, 2.5);
+      dinoCtx.fillStyle = '#09090b';
+      dinoCtx.fillRect(p.x + p.w + 4, p.y + 5, 2.2, 2.2);
 
-    // Лапки с анимацией бега
-    dinoCtx.fillStyle = '#e5e7eb';
-    const step = dinoState.running && p.grounded ? Math.sin(timeMs * 0.025) * 2.5 : 0;
-    dinoCtx.fillRect(p.x + 3, p.y + p.h - 5 + step, 4, 5 - step);
-    dinoCtx.fillRect(p.x + 11, p.y + p.h - 5 - step, 4, 5 + step);
+      dinoCtx.fillStyle = '#d1d5db';
+      const step = dinoState.running ? Math.sin(timeMs * 0.03) * 2.2 : 0;
+      dinoCtx.fillRect(p.x + 2, p.y + 14 + step, 4, 4 - step);
+      dinoCtx.fillRect(p.x + 11, p.y + 14 - step, 4, 4 + step);
+    } else {
+      // Обычный бегущий / прыгающий динозавр
+      dinoCtx.beginPath();
+      dinoCtx.roundRect(p.x, p.y + 7, p.w - 4, p.h - 11, 4);
+      dinoCtx.roundRect(p.x + 7, p.y, p.w - 7, 12, 4);
+      dinoCtx.roundRect(p.x - 5, p.y + 11, 7, 6, 2);
+      dinoCtx.fill();
+
+      dinoCtx.fillStyle = '#09090b';
+      dinoCtx.fillRect(p.x + p.w - 6, p.y + 3, 2.5, 2.5);
+
+      dinoCtx.fillStyle = '#d1d5db';
+      const step = dinoState.running && p.grounded ? Math.sin(timeMs * 0.026) * 2.5 : 0;
+      dinoCtx.fillRect(p.x + 3, p.y + p.h - 5 + step, 4, 5 - step);
+      dinoCtx.fillRect(p.x + 11, p.y + p.h - 5 - step, 4, 5 + step);
+    }
     dinoCtx.restore();
   }
 
+  // Классический зелёный кактус обычного цвета
   function drawCactus(c) {
     dinoCtx.save();
-    const grad = dinoCtx.createLinearGradient(0, c.y, 0, c.y + c.h);
-    grad.addColorStop(0, '#38bdf8');
-    grad.addColorStop(0.55, '#818cf8');
-    grad.addColorStop(1, '#f472b6');
+    dinoCtx.fillStyle = '#2e8b57';
+    dinoCtx.strokeStyle = '#1f633d';
+    dinoCtx.lineWidth = 1;
 
-    dinoCtx.fillStyle = grad;
-    dinoCtx.shadowBlur = 7;
-    dinoCtx.shadowColor = 'rgba(129, 140, 248, 0.45)';
-
-    // Центральный ствол кактуса
     const trunkW = Math.max(6, c.w * 0.44);
     const trunkX = c.x + (c.w - trunkW) / 2;
+
     dinoCtx.beginPath();
     dinoCtx.roundRect(trunkX, c.y, trunkW, c.h, 3);
-    // Боковые ветки кактуса
-    dinoCtx.roundRect(c.x, c.y + c.h * 0.28, trunkX - c.x + 2, 4, 2);
-    dinoCtx.roundRect(c.x, c.y + c.h * 0.14, 4, c.h * 0.24, 2);
-    dinoCtx.roundRect(trunkX + trunkW - 2, c.y + c.h * 0.38, c.x + c.w - (trunkX + trunkW) + 2, 4, 2);
-    dinoCtx.roundRect(c.x + c.w - 4, c.y + c.h * 0.22, 4, c.h * 0.24, 2);
+    dinoCtx.roundRect(c.x, c.y + c.h * 0.30, trunkX - c.x + 2, 4, 2);
+    dinoCtx.roundRect(c.x, c.y + c.h * 0.16, 4, c.h * 0.22, 2);
+    dinoCtx.roundRect(trunkX + trunkW - 2, c.y + c.h * 0.40, c.x + c.w - (trunkX + trunkW) + 2, 4, 2);
+    dinoCtx.roundRect(c.x + c.w - 4, c.y + c.h * 0.24, 4, c.h * 0.22, 2);
+    dinoCtx.fill();
+    dinoCtx.stroke();
+
+    // Светлая полоска объёма и пара мелких колючек
+    dinoCtx.fillStyle = '#3ca368';
+    dinoCtx.fillRect(trunkX + 1.5, c.y + 3, 1.5, c.h - 6);
+    dinoCtx.restore();
+  }
+
+  function drawBird(b, timeMs) {
+    dinoCtx.save();
+    const flap = Math.sin(timeMs * 0.022 + b.phase) > 0;
+    dinoCtx.fillStyle = '#9ca3af';
+
+    // Тело и клюв птицы
+    dinoCtx.beginPath();
+    dinoCtx.roundRect(b.x + 4, b.y + 6, b.w - 8, 7, 3);
+    dinoCtx.fill();
+
+    dinoCtx.fillStyle = '#d1d5db';
+    dinoCtx.beginPath();
+    dinoCtx.moveTo(b.x + 4, b.y + 8);
+    dinoCtx.lineTo(b.x - 2, b.y + 10);
+    dinoCtx.lineTo(b.x + 4, b.y + 11);
+    dinoCtx.closePath();
+    dinoCtx.fill();
+
+    // Взмах крыла
+    dinoCtx.fillStyle = '#e5e7eb';
+    dinoCtx.beginPath();
+    if (flap) {
+      dinoCtx.moveTo(b.x + 9, b.y + 7);
+      dinoCtx.lineTo(b.x + 14, b.y);
+      dinoCtx.lineTo(b.x + 18, b.y + 7);
+    } else {
+      dinoCtx.moveTo(b.x + 9, b.y + 11);
+      dinoCtx.lineTo(b.x + 14, b.y + 17);
+      dinoCtx.lineTo(b.x + 18, b.y + 11);
+    }
+    dinoCtx.closePath();
     dinoCtx.fill();
     dinoCtx.restore();
   }
@@ -589,12 +846,40 @@ document.addEventListener('DOMContentLoaded', () => {
     dinoCtx.clearRect(0, 0, dinoW, dinoH);
     const groundY = dinoH - GROUND_OFFSET;
 
-    if (!dinoState.running && !dinoState.gameOver) {
-      dinoState.player.y = groundY - dinoState.player.h;
+    // Плавный цикл день / ночь каждые 250 очков
+    const isNightTarget = Math.floor(dinoState.score / 250) % 2 === 1 ? 1 : 0;
+    dinoState.nightFactor += (isNightTarget - dinoState.nightFactor) * 0.03;
+
+    if (dinoState.nightFactor > 0.02) {
+      dinoCtx.save();
+      dinoCtx.fillStyle = `rgba(15, 23, 42, ${dinoState.nightFactor * 0.48})`;
+      dinoCtx.fillRect(0, 0, dinoW, dinoH);
+
+      // Луна и звёзды ночью
+      dinoCtx.fillStyle = `rgba(241, 245, 249, ${dinoState.nightFactor * 0.78})`;
+      dinoCtx.beginPath();
+      dinoCtx.arc(dinoW - 44, 28, 8, 0, Math.PI * 2);
+      dinoCtx.fill();
+
+      for (let i = 0; i < dinoStars.length; i++) {
+        const st = dinoStars[i];
+        const twinkle = 0.5 + 0.5 * Math.sin(timeMs * 0.005 + st.phase);
+        dinoCtx.fillStyle = `rgba(255, 255, 255, ${dinoState.nightFactor * twinkle * 0.75})`;
+        dinoCtx.fillRect(st.x * dinoW, st.y * dinoH, st.size, st.size);
+      }
+      dinoCtx.restore();
     }
 
-    // Линия земли и бегущие штрихи
-    dinoCtx.strokeStyle = 'rgba(255, 255, 255, 0.18)';
+    const p = dinoState.player;
+    const activePlayerH = p.ducking && p.grounded ? 16 : 26;
+    p.h = activePlayerH;
+
+    if (!dinoState.running && !dinoState.gameOver) {
+      p.y = groundY - p.h;
+    }
+
+    // Линия земли и камешки
+    dinoCtx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
     dinoCtx.lineWidth = 1.5;
     dinoCtx.beginPath();
     dinoCtx.moveTo(0, groundY);
@@ -607,45 +892,72 @@ document.addEventListener('DOMContentLoaded', () => {
     dinoCtx.fillStyle = 'rgba(255, 255, 255, 0.16)';
     for (let gx = -dinoState.groundScroll; gx < dinoW; gx += 28) {
       dinoCtx.fillRect(gx, groundY + 6, 10, 2);
+      dinoCtx.fillRect(gx + 16, groundY + 11, 4, 1.5);
     }
 
     if (dinoState.running && !dinoState.gameOver) {
-      // Физика прыжка
-      const p = dinoState.player;
-      p.vy += 0.44;
+      const wasAirborne = !p.grounded;
+      p.vy += 0.45;
       p.y += p.vy;
+
       if (p.y >= groundY - p.h) {
         p.y = groundY - p.h;
         p.vy = 0;
         p.grounded = true;
+        if (wasAirborne) {
+          spawnDinoDust(p.x + 6, groundY, 5);
+        }
       }
 
-      // Спавн кактусов
+      if (p.grounded && Math.random() < 0.22) {
+        spawnDinoDust(p.x + 2, groundY, 1);
+      }
+
+      // Спавн кактусов или птиц
       dinoState.nextSpawnFrames -= 1;
       if (dinoState.nextSpawnFrames <= 0) {
-        const h = 22 + Math.floor(Math.random() * 14);
-        const w = 14 + Math.floor(Math.random() * 7);
-        dinoState.cacti.push({
-          x: dinoW + 12,
-          y: groundY - h,
-          w,
-          h
-        });
-        dinoState.nextSpawnFrames = Math.max(44, Math.floor(72 + Math.random() * 48 - dinoState.speed * 2.2));
+        const canSpawnBird = dinoState.score >= 120 && Math.random() < 0.3;
+        if (canSpawnBird) {
+          const flyHigh = Math.random() < 0.55;
+          const birdH = 18;
+          const birdY = flyHigh ? groundY - 34 : groundY - 21;
+          dinoState.obstacles.push({
+            kind: 'bird',
+            x: dinoW + 14,
+            y: birdY,
+            w: 24,
+            h: birdH,
+            phase: Math.random() * Math.PI * 2
+          });
+        } else {
+          const isDoubleCactus = dinoState.score >= 80 && Math.random() < 0.28;
+          const h = 22 + Math.floor(Math.random() * 13);
+          const w = isDoubleCactus ? 25 : (14 + Math.floor(Math.random() * 6));
+          dinoState.obstacles.push({
+            kind: 'cactus',
+            x: dinoW + 12,
+            y: groundY - h,
+            w,
+            h
+          });
+        }
+        dinoState.nextSpawnFrames = Math.max(42, Math.floor(70 + Math.random() * 45 - dinoState.speed * 2));
       }
 
-      // Движение кактусов и проверка столкновений
-      for (let i = dinoState.cacti.length - 1; i >= 0; i--) {
-        const c = dinoState.cacti[i];
-        c.x -= dinoState.speed;
+      // Движение препятствий и проверка столкновений
+      for (let i = dinoState.obstacles.length - 1; i >= 0; i--) {
+        const ob = dinoState.obstacles[i];
+        ob.x -= ob.kind === 'bird' ? dinoState.speed * 1.12 : dinoState.speed;
 
         const pad = 4;
-        const hitX = p.x + pad < c.x + c.w - pad && p.x + p.w - pad > c.x + pad;
-        const hitY = p.y + pad < c.y + c.h - pad && p.y + p.h - pad > c.y + pad;
+        const playerRight = p.ducking && p.grounded ? p.x + p.w + 5 : p.x + p.w;
+        const hitX = p.x + pad < ob.x + ob.w - pad && playerRight - pad > ob.x + pad;
+        const hitY = p.y + pad < ob.y + ob.h - pad && p.y + p.h - pad > ob.y + pad;
 
         if (hitX && hitY) {
           dinoState.gameOver = true;
           dinoState.running = false;
+          playDinoSound('hit');
           const finalScore = Math.floor(dinoState.score);
           if (finalScore > dinoBest) {
             dinoBest = finalScore;
@@ -653,24 +965,51 @@ document.addEventListener('DOMContentLoaded', () => {
             dinoBestEl.textContent = String(dinoBest).padStart(4, '0');
           }
           dinoMsgTitle.textContent = `Игра окончена · Счёт: ${finalScore}`;
-          dinoMsgSub.textContent = 'Нажми Space или кликни, чтобы сыграть снова';
+          dinoMsgSub.textContent = isMobileDevice
+            ? 'Тапни по экрану, чтобы сыграть снова'
+            : 'Нажми Space или кликни, чтобы сыграть снова';
           dinoOverlayMsg.classList.remove('hidden-msg');
         }
 
-        if (c.x + c.w < -10) {
-          dinoState.cacti.splice(i, 1);
+        if (ob.x + ob.w < -15) {
+          dinoState.obstacles.splice(i, 1);
         }
       }
 
-      dinoState.score += 0.16;
-      dinoState.speed = Math.min(8.6, 4.3 + dinoState.score * 0.0045);
-      dinoScoreEl.textContent = String(Math.floor(dinoState.score)).padStart(4, '0');
+      dinoState.score += 0.17;
+      const wholeScore = Math.floor(dinoState.score);
+      if (wholeScore > 0 && wholeScore % 100 === 0 && wholeScore !== dinoState.lastMilestone) {
+        dinoState.lastMilestone = wholeScore;
+        playDinoSound('milestone');
+      }
+
+      dinoState.speed = Math.min(9.2, 4.5 + dinoState.score * 0.0048);
+      dinoScoreEl.textContent = String(wholeScore).padStart(4, '0');
     }
 
-    for (let i = 0; i < dinoState.cacti.length; i++) {
-      drawCactus(dinoState.cacti[i]);
+    // Пылинки из-под лап
+    for (let i = dinoState.dust.length - 1; i >= 0; i--) {
+      const d = dinoState.dust[i];
+      d.x += d.vx;
+      d.y += d.vy;
+      d.alpha -= 0.04;
+      if (d.alpha <= 0) {
+        dinoState.dust.splice(i, 1);
+      } else {
+        dinoCtx.fillStyle = `rgba(229, 231, 235, ${d.alpha})`;
+        dinoCtx.fillRect(d.x, d.y, d.size, d.size);
+      }
     }
-    drawDinoCharacter(dinoState.player, timeMs);
+
+    for (let i = 0; i < dinoState.obstacles.length; i++) {
+      const ob = dinoState.obstacles[i];
+      if (ob.kind === 'bird') {
+        drawBird(ob, timeMs);
+      } else {
+        drawCactus(ob);
+      }
+    }
+    drawDinoCharacter(p, timeMs);
   }
 
   // 2. Плавное перемещение проигрывателя по экрану с интерполяцией
@@ -704,6 +1043,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   topPlayer.addEventListener('pointerdown', (e) => {
+    if (isMobileDevice) return;
     if (shouldIgnorePlayerDrag(e.target)) return;
     if (e.button !== undefined && e.button !== 0 && e.pointerType === 'mouse') return;
 
@@ -889,7 +1229,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   muteBtn.addEventListener('click', () => {
-    openVolumeDrawer();
+    if (!isMobileDevice) openVolumeDrawer();
     if (audio.muted || audio.volume <= 0.025) {
       const restoreVal = lastNonZeroVolume > 0.05 ? lastNonZeroVolume : 0.75;
       applyVolumeValue(restoreVal);
@@ -1021,10 +1361,11 @@ document.addEventListener('DOMContentLoaded', () => {
   seekSlider.addEventListener('pointerup', endScrub);
   seekSlider.addEventListener('pointercancel', endScrub);
 
-  // 6. 3D-наклон полупрозрачных кнопок за курсором мыши
+  // 6. 3D-наклон полупрозрачных кнопок за курсором мыши (на ПК)
   const tiltButtons = document.querySelectorAll('.tilt-btn');
   tiltButtons.forEach((btn) => {
     btn.addEventListener('mousemove', (e) => {
+      if (isMobileDevice) return;
       const rect = btn.getBoundingClientRect();
       const relX = (e.clientX - rect.left) / rect.width - 0.5;
       const relY = (e.clientY - rect.top) / rect.height - 0.5;
@@ -1045,7 +1386,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // 7. Частицы у ползунка прогресса и громкости (включая чёрные частицы)
+  // 7. Частицы у ползунка прогресса и громкости
   const pCanvas = document.getElementById('progress-particles');
   const pCtx = pCanvas.getContext('2d');
   const barParticles = [];
@@ -1240,7 +1581,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   requestAnimationFrame(renderSlidersAndParticles);
 
-  // 8. Анимация снежинок на фоне и за курсором
+  // 8. Анимация снежинок на фоне и за курсором + плавная метель (пасхалка)
   const canvas = document.getElementById('snow-canvas');
   const ctx = canvas.getContext('2d');
 
@@ -1253,33 +1594,72 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   const ambientSnow = [];
+  const blizzardSnow = [];
   const cursorSnow = [];
-  const AMBIENT_COUNT = 95;
+  const BASE_AMBIENT_COUNT = 95;
+  const MAX_BLIZZARD_COUNT = 260;
 
-  for (let i = 0; i < AMBIENT_COUNT; i++) {
-    ambientSnow.push({
+  function createAmbientFlake(randomY = true) {
+    return {
       x: Math.random() * width,
-      y: Math.random() * height,
+      y: randomY ? Math.random() * height : -10,
       radius: Math.random() * 2.4 + 0.8,
       speedY: Math.random() * 0.9 + 0.35,
       speedX: (Math.random() - 0.5) * 0.45,
       swayPhase: Math.random() * Math.PI * 2,
       swaySpeed: Math.random() * 0.02 + 0.008,
       opacity: Math.random() * 0.5 + 0.16
+    };
+  }
+
+  for (let i = 0; i < BASE_AMBIENT_COUNT; i++) {
+    ambientSnow.push(createAmbientFlake(true));
+  }
+
+  function spawnBlizzardFlake() {
+    const fromTop = Math.random() < 0.65;
+    blizzardSnow.push({
+      x: fromTop ? Math.random() * (width + 200) - 100 : -15,
+      y: fromTop ? -12 : Math.random() * height,
+      radius: Math.random() * 2.8 + 0.9,
+      speedY: Math.random() * 3.8 + 2.2,
+      speedX: Math.random() * 4.5 + 2.4,
+      swirlPhase: Math.random() * Math.PI * 2,
+      swirlSpeed: Math.random() * 0.06 + 0.025,
+      opacity: Math.random() * 0.65 + 0.25
     });
   }
 
   function spawnCursorFlakes(x, y) {
-    for (let i = 0; i < 2; i++) {
-      cursorSnow.push({
-        x: x + (Math.random() - 0.5) * 14,
-        y: y + (Math.random() - 0.5) * 14,
-        radius: Math.random() * 2.6 + 1.2,
-        speedX: (Math.random() - 0.5) * 1.4,
-        speedY: Math.random() * 1.2 + 0.5,
-        opacity: 0.95,
-        decay: Math.random() * 0.015 + 0.012
-      });
+    const isBlizzard = blizzardCurrentIntensity > 0.15;
+    const count = isBlizzard ? Math.round(2 + blizzardCurrentIntensity * 7) : 2;
+
+    for (let i = 0; i < count; i++) {
+      if (isBlizzard) {
+        const angle = (Math.random() - 0.35) * 1.1;
+        const gust = (2.2 + Math.random() * 3.8) * blizzardCurrentIntensity;
+        cursorSnow.push({
+          x: x + (Math.random() - 0.5) * 26 * blizzardCurrentIntensity,
+          y: y + (Math.random() - 0.5) * 26 * blizzardCurrentIntensity,
+          speedX: Math.cos(angle) * gust + 1.4 * blizzardCurrentIntensity,
+          speedY: Math.sin(angle) * gust + (Math.random() * 1.8 + 0.6),
+          radius: Math.random() * 2.9 + 1.0,
+          opacity: 0.95,
+          decay: Math.random() * 0.018 + 0.012,
+          swirl: (Math.random() - 0.5) * 0.16
+        });
+      } else {
+        cursorSnow.push({
+          x: x + (Math.random() - 0.5) * 14,
+          y: y + (Math.random() - 0.5) * 14,
+          radius: Math.random() * 2.6 + 1.2,
+          speedX: (Math.random() - 0.5) * 1.4,
+          speedY: Math.random() * 1.2 + 0.5,
+          opacity: 0.95,
+          decay: Math.random() * 0.015 + 0.012,
+          swirl: 0
+        });
+      }
     }
   }
 
@@ -1293,36 +1673,92 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }, { passive: true });
 
-  function drawFlake(x, y, radius, opacity) {
+  function drawFlake(x, y, radius, opacity, stretchX = 0, stretchY = 0) {
     ctx.beginPath();
-    ctx.arc(x, y, radius, 0, Math.PI * 2);
-    ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
-    ctx.shadowBlur = 6;
-    ctx.shadowColor = 'rgba(255, 255, 255, 0.6)';
-    ctx.fill();
+    if (Math.abs(stretchX) > 0.4 || Math.abs(stretchY) > 0.4) {
+      ctx.moveTo(x - stretchX, y - stretchY);
+      ctx.lineTo(x + stretchX, y + stretchY);
+      ctx.strokeStyle = `rgba(255, 255, 255, ${opacity})`;
+      ctx.lineWidth = radius * 1.15;
+      ctx.lineCap = 'round';
+      ctx.stroke();
+    } else {
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
+      ctx.shadowBlur = 6;
+      ctx.shadowColor = 'rgba(255, 255, 255, 0.6)';
+      ctx.fill();
+    }
   }
 
-  function animate() {
+  function animate(timeMs = 0) {
     ctx.clearRect(0, 0, width, height);
+
+    // Плавное нарастание и затухание метели
+    blizzardCurrentIntensity += (blizzardTargetIntensity - blizzardCurrentIntensity) * 0.025;
+    if (blizzardTargetIntensity === 0 && blizzardCurrentIntensity < 0.004) {
+      blizzardCurrentIntensity = 0;
+    }
+
+    // Обычные снежинки ускоряются и отклоняются ветром во время метели
+    const windBoostX = blizzardCurrentIntensity * 4.2 + Math.sin(timeMs * 0.0022) * 1.1 * blizzardCurrentIntensity;
+    const windBoostY = 1 + blizzardCurrentIntensity * 2.4;
 
     for (let i = 0; i < ambientSnow.length; i++) {
       const f = ambientSnow[i];
-      f.swayPhase += f.swaySpeed;
-      f.y += f.speedY;
-      f.x += f.speedX + Math.sin(f.swayPhase) * 0.25;
+      f.swayPhase += f.swaySpeed * (1 + blizzardCurrentIntensity * 2);
+      f.y += f.speedY * windBoostY;
+      f.x += f.speedX + windBoostX + Math.sin(f.swayPhase) * (0.25 + blizzardCurrentIntensity * 0.8);
 
-      if (f.y > height) {
-        f.y = -5;
+      if (f.y > height + 10) {
+        f.y = -8;
         f.x = Math.random() * width;
       }
-      if (f.x > width) f.x = 0;
-      if (f.x < 0) f.x = width;
+      if (f.x > width + 10) f.x = -8;
+      if (f.x < -10) f.x = width + 8;
 
-      drawFlake(f.x, f.y, f.radius, f.opacity);
+      const streak = blizzardCurrentIntensity * 2.2;
+      drawFlake(f.x, f.y, f.radius, f.opacity, streak, streak * 0.65);
     }
 
+    // Дополнительные плотные снежинки метели
+    const desiredBlizzardCount = Math.floor(MAX_BLIZZARD_COUNT * blizzardCurrentIntensity);
+    while (blizzardSnow.length < desiredBlizzardCount) {
+      spawnBlizzardFlake();
+    }
+
+    for (let i = blizzardSnow.length - 1; i >= 0; i--) {
+      const bf = blizzardSnow[i];
+      bf.swirlPhase += bf.swirlSpeed;
+      const activeFactor = Math.max(0.25, blizzardCurrentIntensity);
+      bf.x += (bf.speedX + Math.cos(bf.swirlPhase) * 1.1) * activeFactor;
+      bf.y += (bf.speedY + Math.sin(bf.swirlPhase) * 0.7) * activeFactor;
+
+      if (blizzardTargetIntensity === 0) {
+        bf.opacity -= 0.008;
+      }
+
+      if (bf.opacity <= 0.01 || bf.y > height + 20 || bf.x > width + 40) {
+        if (blizzardSnow.length > desiredBlizzardCount || bf.opacity <= 0.01) {
+          blizzardSnow.splice(i, 1);
+          continue;
+        }
+        bf.x = Math.random() < 0.65 ? Math.random() * (width + 200) - 100 : -15;
+        bf.y = bf.x < 0 ? Math.random() * height : -12;
+      }
+
+      const drawAlpha = bf.opacity * Math.min(1, blizzardCurrentIntensity * 1.35);
+      const streakX = 2.8 * blizzardCurrentIntensity;
+      const streakY = 2.1 * blizzardCurrentIntensity;
+      drawFlake(bf.x, bf.y, bf.radius, drawAlpha, streakX, streakY);
+    }
+
+    // Снежинки за курсором
     for (let i = cursorSnow.length - 1; i >= 0; i--) {
       const p = cursorSnow[i];
+      if (p.swirl) {
+        p.speedY += Math.sin(timeMs * 0.01 + i) * p.swirl;
+      }
       p.x += p.speedX;
       p.y += p.speedY;
       p.opacity -= p.decay;
@@ -1330,7 +1766,8 @@ document.addEventListener('DOMContentLoaded', () => {
       if (p.opacity <= 0) {
         cursorSnow.splice(i, 1);
       } else {
-        drawFlake(p.x, p.y, p.radius, p.opacity);
+        const cStreak = blizzardCurrentIntensity * 1.8;
+        drawFlake(p.x, p.y, p.radius, p.opacity, cStreak, cStreak * 0.5);
       }
     }
 
