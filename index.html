@@ -88,7 +88,6 @@
             </svg>
           </button>
 
-          <!-- Выезжает вниз из-под кнопки звука -->
           <div id="volume-drawer" class="volume-drawer">
             <div class="volume-inner">
               <div class="volume-bar-visual">
@@ -121,22 +120,54 @@
       <p class="bio">16 y. o. вайбкодер, делаю разные проекты на python, C++.</p>
     </header>
 
+    <!-- Компактный Discord-виджет с раскрытием RPC при наведении -->
+    <section id="discord-card" class="discord-card flip-item" style="--delay: 0.12s;" aria-label="Discord профиль и активность">
+      <div class="discord-compact">
+        <div class="discord-avatar-box">
+          <img id="dc-avatar" class="discord-avatar" src="avatar.jpg" alt="Discord аватар">
+          <span id="dc-status-dot" class="dc-status-dot offline" title="Статус Discord"></span>
+        </div>
+
+        <div class="discord-user-meta">
+          <div class="discord-name-row">
+            <span id="dc-username" class="discord-username">sekailauren</span>
+            <span id="dc-status-text" class="discord-status-label">offline</span>
+          </div>
+          <p id="dc-custom-status" class="discord-custom-status">Наведи, чтобы посмотреть RPC</p>
+        </div>
+
+        <span class="discord-expand-hint" aria-hidden="true">RPC ▾</span>
+      </div>
+
+      <div id="discord-rpc-drawer" class="discord-rpc-drawer">
+        <div class="discord-rpc-inner">
+          <img id="dc-rpc-img" class="dc-rpc-img hidden-icon" src="" alt="Иконка активности">
+          <div class="dc-rpc-text">
+            <div id="dc-rpc-name" class="dc-rpc-name">Нет активного RPC</div>
+            <div id="dc-rpc-details" class="dc-rpc-line"></div>
+            <div id="dc-rpc-state" class="dc-rpc-line"></div>
+          </div>
+          <div id="dc-rpc-elapsed" class="dc-rpc-elapsed"></div>
+        </div>
+      </div>
+    </section>
+
     <nav class="links" aria-label="Основные ссылки">
-      <a class="link-btn tg-btn tilt-btn flip-item" style="--delay: 0.18s;" href="https://t.me/sekailauren" target="_blank" rel="noopener">
+      <a class="link-btn tg-btn tilt-btn flip-item" style="--delay: 0.22s;" href="https://t.me/sekailauren" target="_blank" rel="noopener">
         <span>Telegram</span>
       </a>
-      <a class="link-btn gray-btn tilt-btn flip-item" style="--delay: 0.30s;" href="https://github.com/zxckill666" target="_blank" rel="noopener">
+      <a class="link-btn gray-btn tilt-btn flip-item" style="--delay: 0.34s;" href="https://github.com/zxckill666" target="_blank" rel="noopener">
         <span>GitHub</span>
       </a>
-      <a class="link-btn gray-btn tilt-btn flip-item" style="--delay: 0.42s;" href="https://soundcloud.com/kawaimonster87" target="_blank" rel="noopener">
+      <a class="link-btn gray-btn tilt-btn flip-item" style="--delay: 0.46s;" href="https://soundcloud.com/kawaimonster87" target="_blank" rel="noopener">
         <span>SoundCloud</span>
       </a>
-      <a class="link-btn gray-btn tilt-btn flip-item" style="--delay: 0.54s;" href="mailto:bilyaeva.02031993@outlook.com">
+      <a class="link-btn gray-btn tilt-btn flip-item" style="--delay: 0.58s;" href="mailto:bilyaeva.02031993@outlook.com">
         <span>Написать на почту</span>
       </a>
     </nav>
 
-    <footer class="footer flip-item" style="--delay: 0.66s;">
+    <footer class="footer flip-item" style="--delay: 0.70s;">
       <span>© 2026</span>
     </footer>
   </main>

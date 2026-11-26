@@ -26,6 +26,143 @@ document.addEventListener('DOMContentLoaded', () => {
 
   audio.volume = lastNonZeroVolume;
 
+  // 00. Живой Discord профиль и RPC через Lanyard (без секретного ключа в клиенте)
+  const DISCORD_USER_ID = '1378047204119547989';
+  const dcAvatarEl = document.getElementById('dc-avatar');
+  const dcStatusDotEl = document.getElementById('dc-status-dot');
+  const dcUsernameEl = document.getElementById('dc-username');
+  const dcStatusTextEl = document.getElementById('dc-status-text');
+  const dcCustomStatusEl = document.getElementById('dc-custom-status');
+  const dcRpcImgEl = document.getElementById('dc-rpc-img');
+  const dcRpcNameEl = document.getElementById('dc-rpc-name');
+  const dcRpcDetailsEl = document.getElementById('dc-rpc-details');
+  const dcRpcStateEl = document.getElementById('dc-rpc-state');
+  const dcRpcElapsedEl = document.getElementById('dc-rpc-elapsed');
+
+  let activeRpcStartMs = null;
+
+  function resolveRpcAssetUrl(activity, discordUserId) {
+    const assets = activity?.assets;
+    const appId = activity?.application_id;
+    const raw = assets?.large_image || assets?.small_image;
+    if (!raw) return '';
+    if (raw.startsWith('mp:external/')) {
+      return `https://media.discordapp.net/external/${raw.replace('mp:external/', '')}`;
+    }
+    if (appId) {
+      return `https://cdn.discordapp.com/app-assets/${appId}/${raw}.png`;
+    }
+    return `https://cdn.discordapp.com/avatars/${discordUserId}/${raw}.png`;
+  }
+
+  function formatElapsed(startMs) {
+    if (!startMs) return '';
+    const diffSec = Math.max(0, Math.floor((Date.now() - startMs) / 1000));
+    const hrs = Math.floor(diffSec / 3600);
+    const mins = Math.floor((diffSec % 3600) / 60);
+    const secs = diffSec % 60;
+    if (hrs > 0) {
+      return `${hrs}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    }
+    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  }
+
+  function renderLanyardPresence(data) {
+    if (!data) return;
+
+    const user = data.discord_user;
+    if (user) {
+      dcUsernameEl.textContent = user.global_name || user.username || 'sekailauren';
+      if (user.avatar) {
+        dcAvatarEl.src = `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=128`;
+      }
+    }
+
+    const status = data.discord_status || 'offline';
+    dcStatusDotEl.className = `dc-status-dot ${status}`;
+    dcStatusTextEl.textContent = status;
+
+    const activities = Array.isArray(data.activities) ? data.activities : [];
+    const customAct = activities.find((a) => a.type === 4);
+    const rpcAct = activities.find((a) => a.type !== 4);
+
+    if (customAct && (customAct.state || customAct.emoji?.name)) {
+      const emojiPrefix = customAct.emoji?.name && !customAct.emoji?.id ? `${customAct.emoji.name} ` : '';
+      dcCustomStatusEl.textContent = `${emojiPrefix}${customAct.state || ''}`.trim();
+    } else {
+      dcCustomStatusEl.textContent = rpcAct ? `Активен: ${rpcAct.name}` : 'Наведи, чтобы посмотреть RPC';
+    }
+
+    if (rpcAct) {
+      dcRpcNameEl.textContent = rpcAct.name || 'Активность';
+      dcRpcDetailsEl.textContent = rpcAct.details || '';
+      dcRpcStateEl.textContent = rpcAct.state || '';
+      activeRpcStartMs = rpcAct.timestamps?.start || null;
+      dcRpcElapsedEl.textContent = activeRpcStartMs ? formatElapsed(activeRpcStartMs) : '';
+
+      const imgUrl = resolveRpcAssetUrl(rpcAct, user?.id || DISCORD_USER_ID);
+      if (imgUrl) {
+        dcRpcImgEl.src = imgUrl;
+        dcRpcImgEl.classList.remove('hidden-icon');
+      } else {
+        dcRpcImgEl.classList.add('hidden-icon');
+      }
+    } else {
+      dcRpcNameEl.textContent = 'Нет активного RPC';
+      dcRpcDetailsEl.textContent = 'Запусти игру, код или музыку в Discord';
+      dcRpcStateEl.textContent = '';
+      dcRpcElapsedEl.textContent = '';
+      activeRpcStartMs = null;
+      dcRpcImgEl.classList.add('hidden-icon');
+    }
+  }
+
+  function initLanyard() {
+    fetch(`https://api.lanyard.rest/v1/users/${DISCORD_USER_ID}`, { cache: 'no-store' })
+      .then((res) => (res.ok ? res.json() : Promise.reject()))
+      .then((json) => {
+        if (json?.success && json?.data) {
+          renderLanyardPresence(json.data);
+        }
+      })
+      .catch(() => {});
+
+    let heartbeatId = null;
+    const ws = new WebSocket('wss://api.lanyard.rest/socket');
+
+    ws.addEventListener('message', (event) => {
+      try {
+        const payload = JSON.parse(event.data);
+        if (payload.op === 1 && payload.d?.heartbeat_interval) {
+          ws.send(JSON.stringify({
+            op: 2,
+            d: { subscribe_to_id: DISCORD_USER_ID }
+          }));
+          clearInterval(heartbeatId);
+          heartbeatId = setInterval(() => {
+            if (ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify({ op: 3 }));
+            }
+          }, payload.d.heartbeat_interval);
+        } else if (payload.op === 0 && (payload.t === 'INIT_STATE' || payload.t === 'PRESENCE_UPDATE')) {
+          renderLanyardPresence(payload.d);
+        }
+      } catch (_) {}
+    });
+
+    ws.addEventListener('close', () => {
+      clearInterval(heartbeatId);
+    });
+
+    setInterval(() => {
+      if (activeRpcStartMs) {
+        dcRpcElapsedEl.textContent = formatElapsed(activeRpcStartMs);
+      }
+    }, 1000);
+  }
+
+  initLanyard();
+
   // 0. Счетчик просмотров био с глазиком в правом верхнем углу
   const viewsCountEl = document.getElementById('views-count');
   const COUNTER_NAMESPACE = 'sekailauren_bio_2026';
@@ -517,14 +654,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const rect = pCanvas.getBoundingClientRect();
     if (rect.width <= 0) return;
 
-    // Привязка строго к положению ползунка внутри progress-particles
     const insetPad = 10;
     const usableWidth = Math.max(1, rect.width - insetPad * 2);
     const thumbX = insetPad + usableWidth * (smoothProgressPercent / 100);
     const centerY = rect.height / 2;
 
     for (let i = 0; i < count; i++) {
-      // 45% вероятности создать чёрную частицу
       const pickBlack = Math.random() < 0.45;
       const chosen = pickBlack
         ? particlePalette[Math.random() < 0.5 ? 0 : 1]
@@ -595,7 +730,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function renderSlidersAndParticles(timeMs = 0) {
-    // Плавное перемещение проигрывателя
     if (playerPosInitialized) {
       const posFactor = isPlayerDragging ? 0.36 : 0.16;
       currentPlayerX += (targetPlayerX - currentPlayerX) * posFactor;
@@ -606,21 +740,17 @@ document.addEventListener('DOMContentLoaded', () => {
       topPlayer.style.margin = '0';
     }
 
-    // CAVA-полоски
     renderCavaBars(timeMs);
 
-    // Плавная интерполяция прогресса
     const progFactor = isScrubbing ? 0.65 : 0.18;
     smoothProgressPercent += (targetProgressPercent - smoothProgressPercent) * progFactor;
     progressFill.style.width = `${smoothProgressPercent.toFixed(3)}%`;
 
-    // Плавная интерполяция громкости
     const volFactor = isVolumeDragging ? 0.35 : 0.15;
     smoothVolumePercent += (targetVolumePercent - smoothVolumePercent) * volFactor;
     volumeFill.style.width = `${smoothVolumePercent.toFixed(3)}%`;
     volumeThumb.style.left = `${smoothVolumePercent.toFixed(3)}%`;
 
-    // Частицы прогресса: больше частиц при перетаскивании
     const pRect = pCanvas.getBoundingClientRect();
     pCtx.clearRect(0, 0, pRect.width, pRect.height);
 
@@ -645,7 +775,6 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    // Частицы громкости
     const vRect = vCanvas.getBoundingClientRect();
     vCtx.clearRect(0, 0, vRect.width, vRect.height);
 
