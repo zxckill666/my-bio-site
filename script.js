@@ -26,10 +26,70 @@ document.addEventListener('DOMContentLoaded', () => {
 
   audio.volume = lastNonZeroVolume;
 
+  // 0. Счетчик просмотров био с глазиком в правом верхнем углу
+  const viewsCountEl = document.getElementById('views-count');
+  const COUNTER_NAMESPACE = 'sekailauren_bio_2026';
+  const COUNTER_KEY = 'visits';
+  const LOCAL_FALLBACK_KEY = 'sekailauren_local_views_v1';
+
+  function updateViewsCounter() {
+    let localCount = parseInt(localStorage.getItem(LOCAL_FALLBACK_KEY) || '0', 10);
+    if (!Number.isFinite(localCount) || localCount < 0) localCount = 0;
+    localCount += 1;
+    localStorage.setItem(LOCAL_FALLBACK_KEY, String(localCount));
+    viewsCountEl.textContent = String(localCount);
+
+    fetch(`https://api.counterapi.dev/v1/${COUNTER_NAMESPACE}/${COUNTER_KEY}/up`, {
+      cache: 'no-store'
+    })
+      .then((res) => (res.ok ? res.json() : Promise.reject()))
+      .then((data) => {
+        const remoteVal = typeof data?.count === 'number'
+          ? data.count
+          : (typeof data?.value === 'number' ? data.value : null);
+        if (typeof remoteVal === 'number' && remoteVal > 0) {
+          viewsCountEl.textContent = String(remoteVal);
+        }
+      })
+      .catch(() => {
+        // Оставляем локальный счетчик, если внешний сервис недоступен
+      });
+  }
+
+  updateViewsCounter();
+
   // 1. Логика входа по клику на >my bio<
   const entryScreen = document.getElementById('entry-screen');
   const enterBtn = document.getElementById('enter-btn');
   const mainContent = document.getElementById('main-content');
+
+  // Подготовка Web Audio API для живых CAVA-полосок от звука
+  let audioCtx = null;
+  let analyser = null;
+  let freqData = null;
+
+  function initAudioAnalyser() {
+    if (audioCtx) {
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume().catch(() => {});
+      }
+      return;
+    }
+    try {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) return;
+      audioCtx = new AudioContextClass();
+      const source = audioCtx.createMediaElementSource(audio);
+      analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 64;
+      analyser.smoothingTimeConstant = 0.78;
+      source.connect(analyser);
+      analyser.connect(audioCtx.destination);
+      freqData = new Uint8Array(analyser.frequencyBinCount);
+    } catch (_) {
+      analyser = null;
+    }
+  }
 
   enterBtn.addEventListener('click', () => {
     entryScreen.classList.add('fade-out');
@@ -39,10 +99,150 @@ document.addEventListener('DOMContentLoaded', () => {
       mainContent.classList.add('revealed');
     });
 
+    initAudioAnalyser();
     audio.play().catch(() => {});
   });
 
-  // 2. Логика проигрывателя и громкости
+  // 2. Плавное перемещение проигрывателя по экрану с интерполяцией
+  let isPlayerDragging = false;
+  let playerDragOffsetX = 0;
+  let playerDragOffsetY = 0;
+  let targetPlayerX = null;
+  let targetPlayerY = null;
+  let currentPlayerX = null;
+  let currentPlayerY = null;
+  let playerPosInitialized = false;
+
+  function clampPlayerPosition(x, y) {
+    const rect = topPlayer.getBoundingClientRect();
+    const margin = 10;
+    const maxX = Math.max(margin, window.innerWidth - rect.width - margin);
+    const maxY = Math.max(margin, window.innerHeight - rect.height - margin);
+    return {
+      x: Math.max(margin, Math.min(x, maxX)),
+      y: Math.max(margin, Math.min(y, maxY))
+    };
+  }
+
+  function shouldIgnorePlayerDrag(target) {
+    return Boolean(
+      target.closest('button') ||
+      target.closest('input') ||
+      target.closest('.progress-track-wrap') ||
+      target.closest('.volume-drawer')
+    );
+  }
+
+  topPlayer.addEventListener('pointerdown', (e) => {
+    if (shouldIgnorePlayerDrag(e.target)) return;
+    if (e.button !== undefined && e.button !== 0 && e.pointerType === 'mouse') return;
+
+    const rect = topPlayer.getBoundingClientRect();
+    if (!playerPosInitialized) {
+      currentPlayerX = rect.left;
+      currentPlayerY = rect.top;
+      targetPlayerX = rect.left;
+      targetPlayerY = rect.top;
+      playerPosInitialized = true;
+    }
+
+    isPlayerDragging = true;
+    playerDragOffsetX = e.clientX - currentPlayerX;
+    playerDragOffsetY = e.clientY - currentPlayerY;
+    topPlayer.classList.add('dragging');
+    topPlayer.setPointerCapture(e.pointerId);
+  });
+
+  topPlayer.addEventListener('pointermove', (e) => {
+    if (!isPlayerDragging) return;
+    const clamped = clampPlayerPosition(
+      e.clientX - playerDragOffsetX,
+      e.clientY - playerDragOffsetY
+    );
+    targetPlayerX = clamped.x;
+    targetPlayerY = clamped.y;
+  });
+
+  function stopPlayerDrag(e) {
+    if (!isPlayerDragging) return;
+    isPlayerDragging = false;
+    topPlayer.classList.remove('dragging');
+    if (topPlayer.hasPointerCapture(e.pointerId)) {
+      topPlayer.releasePointerCapture(e.pointerId);
+    }
+  }
+
+  topPlayer.addEventListener('pointerup', stopPlayerDrag);
+  topPlayer.addEventListener('pointercancel', stopPlayerDrag);
+
+  window.addEventListener('resize', () => {
+    if (!playerPosInitialized) return;
+    const clamped = clampPlayerPosition(targetPlayerX, targetPlayerY);
+    targetPlayerX = clamped.x;
+    targetPlayerY = clamped.y;
+  });
+
+  // 3. CAVA-полоски рядом с названием трека
+  const cavaCanvas = document.getElementById('cava-canvas');
+  const cavaCtx = cavaCanvas.getContext('2d');
+  const CAVA_BARS = 8;
+  const cavaLevels = new Array(CAVA_BARS).fill(0.15);
+
+  function renderCavaBars(timeMs) {
+    const w = cavaCanvas.width;
+    const h = cavaCanvas.height;
+    cavaCtx.clearRect(0, 0, w, h);
+
+    const isPlaying = !audio.paused && !audio.muted && audio.volume > 0.01;
+    let hasRealAudio = false;
+
+    if (analyser && freqData && isPlaying) {
+      analyser.getByteFrequencyData(freqData);
+      for (let i = 0; i < freqData.length; i++) {
+        if (freqData[i] > 6) {
+          hasRealAudio = true;
+          break;
+        }
+      }
+    }
+
+    const gap = 2;
+    const barWidth = Math.max(2, (w - gap * (CAVA_BARS - 1)) / CAVA_BARS);
+
+    for (let i = 0; i < CAVA_BARS; i++) {
+      let targetLevel = 0.14;
+
+      if (isPlaying) {
+        if (hasRealAudio && freqData) {
+          const binIndex = Math.min(freqData.length - 1, Math.floor((i / CAVA_BARS) * 18) + 1);
+          targetLevel = Math.max(0.16, Math.min(1, (freqData[binIndex] / 255) * 1.25));
+        } else {
+          // Живая волна в стиле CAVA при воспроизведении
+          const wave1 = Math.sin(timeMs * 0.0085 + i * 0.75) * 0.5 + 0.5;
+          const wave2 = Math.cos(timeMs * 0.013 - i * 1.1) * 0.5 + 0.5;
+          targetLevel = Math.max(0.18, Math.min(0.96, wave1 * 0.62 + wave2 * 0.34));
+        }
+      }
+
+      cavaLevels[i] += (targetLevel - cavaLevels[i]) * (isPlaying ? 0.26 : 0.14);
+
+      const barHeight = Math.max(3, cavaLevels[i] * (h - 2));
+      const x = i * (barWidth + gap);
+      const y = h - barHeight;
+
+      const grad = cavaCtx.createLinearGradient(0, y, 0, h);
+      grad.addColorStop(0, '#38bdf8');
+      grad.addColorStop(0.55, '#818cf8');
+      grad.addColorStop(1, '#f472b6');
+
+      cavaCtx.fillStyle = grad;
+      cavaCtx.beginPath();
+      cavaCtx.roundRect(x, y, barWidth, barHeight, 2);
+      cavaCtx.fill();
+    }
+  }
+
+  // 4. Логика проигрывателя и громкости
   function formatTime(sec) {
     if (!Number.isFinite(sec) || sec < 0) return '00:00';
     const mins = Math.floor(sec / 60);
@@ -90,7 +290,6 @@ document.addEventListener('DOMContentLoaded', () => {
     spawnVolumeBurst(3);
   }
 
-  // Плавное открытие/закрытие ползунка громкости вниз при наведении
   let volumeCloseTimer = null;
 
   function openVolumeDrawer() {
@@ -112,6 +311,7 @@ document.addEventListener('DOMContentLoaded', () => {
   volumeControl.addEventListener('mouseleave', scheduleCloseVolumeDrawer);
 
   playPauseBtn.addEventListener('click', () => {
+    initAudioAnalyser();
     if (audio.paused) {
       audio.play().catch(() => {});
     } else {
@@ -181,7 +381,7 @@ document.addEventListener('DOMContentLoaded', () => {
     durationTimeEl.textContent = formatTime(audio.duration);
   });
 
-  // 3. Сверхплавный драг перемотки трека
+  // 5. Сверхплавный драг перемотки трека
   let isScrubbing = false;
 
   function setSeekFromClientX(clientX) {
@@ -248,7 +448,31 @@ document.addEventListener('DOMContentLoaded', () => {
   seekSlider.addEventListener('pointerup', endScrub);
   seekSlider.addEventListener('pointercancel', endScrub);
 
-  // 4. Частички вдоль ползунка прогресса и ползунка громкости
+  // 6. 3D-наклон полупрозрачных кнопок за курсором мыши
+  const tiltButtons = document.querySelectorAll('.tilt-btn');
+  tiltButtons.forEach((btn) => {
+    btn.addEventListener('mousemove', (e) => {
+      const rect = btn.getBoundingClientRect();
+      const relX = (e.clientX - rect.left) / rect.width - 0.5;
+      const relY = (e.clientY - rect.top) / rect.height - 0.5;
+      const rotateY = relX * 14;
+      const rotateX = -relY * 14;
+
+      btn.classList.add('is-tilting');
+      btn.style.setProperty('--rx', `${rotateX.toFixed(2)}deg`);
+      btn.style.setProperty('--ry', `${rotateY.toFixed(2)}deg`);
+      btn.style.setProperty('--ty', '-3px');
+    });
+
+    btn.addEventListener('mouseleave', () => {
+      btn.classList.remove('is-tilting');
+      btn.style.setProperty('--rx', '0deg');
+      btn.style.setProperty('--ry', '0deg');
+      btn.style.setProperty('--ty', '0px');
+    });
+  });
+
+  // 7. Частички вдоль ползунка прогресса и ползунка громкости
   const pCanvas = document.getElementById('progress-particles');
   const pCtx = pCanvas.getContext('2d');
   const barParticles = [];
@@ -320,7 +544,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  function renderSlidersAndParticles() {
+  function renderSlidersAndParticles(timeMs = 0) {
+    // Плавное перемещение проигрывателя
+    if (playerPosInitialized) {
+      const posFactor = isPlayerDragging ? 0.36 : 0.16;
+      currentPlayerX += (targetPlayerX - currentPlayerX) * posFactor;
+      currentPlayerY += (targetPlayerY - currentPlayerY) * posFactor;
+      topPlayer.style.position = 'fixed';
+      topPlayer.style.left = `${currentPlayerX.toFixed(2)}px`;
+      topPlayer.style.top = `${currentPlayerY.toFixed(2)}px`;
+      topPlayer.style.margin = '0';
+    }
+
+    // CAVA-полоски
+    renderCavaBars(timeMs);
+
     // Сверхплавная интерполяция прогресса
     const progFactor = isScrubbing ? 0.42 : 0.16;
     smoothProgressPercent += (targetProgressPercent - smoothProgressPercent) * progFactor;
@@ -394,9 +632,9 @@ document.addEventListener('DOMContentLoaded', () => {
     requestAnimationFrame(renderSlidersAndParticles);
   }
 
-  renderSlidersAndParticles();
+  requestAnimationFrame(renderSlidersAndParticles);
 
-  // 5. Анимация снежинок на фоне и за курсором
+  // 8. Анимация снежинок на фоне и за курсором
   const canvas = document.getElementById('snow-canvas');
   const ctx = canvas.getContext('2d');
 

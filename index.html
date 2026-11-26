@@ -10,6 +10,15 @@
   <!-- Холст для снежинок на фоне и за курсором -->
   <canvas id="snow-canvas"></canvas>
 
+  <!-- Счетчик просмотров с глазиком в правом верхнем углу -->
+  <div id="views-badge" class="views-badge" title="Просмотры страницы">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+      <circle cx="12" cy="12" r="3"></circle>
+    </svg>
+    <span id="views-count">—</span>
+  </div>
+
   <!-- Стартовый экран с блюром и надписью >my bio< -->
   <div id="entry-screen" class="entry-overlay">
     <button id="enter-btn" class="entry-text" type="button">
@@ -17,16 +26,19 @@
     </button>
   </div>
 
-  <!-- Фиксированный сверху полупрозрачный мини-плеер -->
+  <!-- Полупрозрачный проигрыватель с CAVA-полосками и плавным перемещением -->
   <header class="top-player-wrap" aria-label="Аудиоплеер">
     <div id="top-player" class="top-player">
-      <audio id="audio-element" src="track.mp3" preload="metadata"></audio>
+      <audio id="audio-element" src="track.mp3" preload="metadata" crossorigin="anonymous"></audio>
 
       <img class="top-player-cover" src="cover.jpg" alt="Обложка The Beginning">
 
       <div class="top-player-main">
         <div class="top-player-header">
-          <span class="top-player-title">The Beginning</span>
+          <div class="title-and-cava">
+            <span class="top-player-title">The Beginning</span>
+            <canvas id="cava-canvas" class="cava-canvas" width="54" height="16" aria-hidden="true"></canvas>
+          </div>
           <span class="top-player-time">
             <span id="current-time">00:00</span> / <span id="duration-time">00:00</span>
           </span>
@@ -108,16 +120,16 @@
     </header>
 
     <nav class="links" aria-label="Основные ссылки">
-      <a class="link-btn tg-btn flip-item" style="--delay: 0.18s;" href="https://t.me/sekailauren" target="_blank" rel="noopener">
+      <a class="link-btn tg-btn tilt-btn flip-item" style="--delay: 0.18s;" href="https://t.me/sekailauren" target="_blank" rel="noopener">
         <span>Telegram</span>
       </a>
-      <a class="link-btn gray-btn flip-item" style="--delay: 0.30s;" href="https://github.com/zxckill666" target="_blank" rel="noopener">
+      <a class="link-btn gray-btn tilt-btn flip-item" style="--delay: 0.30s;" href="https://github.com/zxckill666" target="_blank" rel="noopener">
         <span>GitHub</span>
       </a>
-      <a class="link-btn gray-btn flip-item" style="--delay: 0.42s;" href="https://soundcloud.com/kawaimonster87" target="_blank" rel="noopener">
+      <a class="link-btn gray-btn tilt-btn flip-item" style="--delay: 0.42s;" href="https://soundcloud.com/kawaimonster87" target="_blank" rel="noopener">
         <span>SoundCloud</span>
       </a>
-      <a class="link-btn gray-btn flip-item" style="--delay: 0.54s;" href="mailto:bilyaeva.02031993@outlook.com">
+      <a class="link-btn gray-btn tilt-btn flip-item" style="--delay: 0.54s;" href="mailto:bilyaeva.02031993@outlook.com">
         <span>Написать на почту</span>
       </a>
     </nav>
