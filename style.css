@@ -18,6 +18,59 @@ body {
   color: #f3f4f6;
   overflow: hidden;
   user-select: none;
+  transition: filter 0.35s ease;
+}
+
+/* Хакерский / ретро-сканлайн режим при пасхалке */
+.hacker-scanlines {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  pointer-events: none;
+  opacity: 0;
+  background:
+    repeating-linear-gradient(
+      to bottom,
+      rgba(34, 197, 94, 0.045) 0px,
+      rgba(34, 197, 94, 0.045) 1px,
+      transparent 1px,
+      transparent 3px
+    ),
+    radial-gradient(circle at 50% 50%, transparent 58%, rgba(0, 0, 0, 0.55) 100%);
+  transition: opacity 0.45s ease;
+}
+
+body.hacker-mode .hacker-scanlines {
+  opacity: 1;
+}
+
+body.hacker-mode {
+  background-image: radial-gradient(circle at 50% 0%, #091a10 0%, #050706 75%);
+}
+
+body.hacker-mode h1,
+body.hacker-mode .entry-text,
+body.hacker-mode .dino-title,
+body.hacker-mode .lofi-caption,
+body.hacker-mode .link-btn,
+body.hacker-mode .discord-username,
+body.hacker-mode .top-player-title,
+body.hacker-mode .bio,
+body.hacker-mode .footer {
+  font-family: 'Consolas', 'Courier New', monospace;
+  letter-spacing: 0.6px;
+}
+
+body.hacker-mode h1,
+body.hacker-mode .lofi-caption,
+body.hacker-mode .footer {
+  color: #4ade80;
+  text-shadow: 0 0 12px rgba(74, 222, 128, 0.35);
+}
+
+body.hacker-mode .link-btn {
+  border-color: rgba(74, 222, 128, 0.35);
+  box-shadow: 0 6px 20px rgba(22, 163, 74, 0.16);
 }
 
 /* Канвас со снегом */
@@ -525,7 +578,7 @@ body {
   z-index: 3;
 }
 
-/* Правая навигация: две пульсирующие точки + подсказка */
+/* Правая навигация: три пульсирующие точки + подсказка */
 .tab-nav-rail {
   position: fixed;
   right: 18px;
@@ -645,7 +698,11 @@ body.is-mobile .mobile-only-icon {
 }
 
 .tab-dot:nth-child(2) {
-  animation-delay: 1.2s;
+  animation-delay: 0.8s;
+}
+
+.tab-dot:nth-child(3) {
+  animation-delay: 1.6s;
 }
 
 .tab-dot:hover {
@@ -1172,240 +1229,4 @@ h1 {
     transform 0.16s ease-out,
     box-shadow 0.25s ease,
     background-color 0.25s ease,
-    border-color 0.25s ease;
-}
-
-.container.revealed .link-btn {
-  transform: perspective(700px) rotateX(var(--rx)) rotateY(var(--ry)) translateY(var(--ty));
-}
-
-.container.revealed .link-btn.is-tilting {
-  transition:
-    transform 0.06s linear,
-    box-shadow 0.25s ease,
-    background-color 0.25s ease,
-    border-color 0.25s ease;
-}
-
-.link-btn::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 60%;
-  height: 100%;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.18),
-    transparent
-  );
-  transform: skewX(-25deg);
-  transition: left 0.55s ease;
-}
-
-.link-btn:hover::before {
-  left: 140%;
-}
-
-.link-btn:active {
-  --ty: 0px;
-}
-
-.tg-btn {
-  background: linear-gradient(135deg, rgba(34, 158, 217, 0.68) 0%, rgba(22, 119, 168, 0.68) 100%);
-  color: #ffffff;
-  border: 1px solid rgba(56, 189, 248, 0.45);
-  box-shadow: 0 6px 20px rgba(34, 158, 217, 0.22);
-}
-
-.tg-btn:hover {
-  background: linear-gradient(135deg, rgba(41, 169, 230, 0.82) 0%, rgba(27, 133, 186, 0.82) 100%);
-  border-color: rgba(125, 211, 252, 0.8);
-  box-shadow: 0 10px 28px rgba(34, 158, 217, 0.42);
-}
-
-.gray-btn {
-  background: rgba(20, 20, 24, 0.58);
-  color: #e5e7eb;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
-}
-
-.gray-btn:hover {
-  background: rgba(32, 32, 38, 0.76);
-  color: #ffffff;
-  border-color: rgba(255, 255, 255, 0.28);
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.72);
-}
-
-/* Вторая вкладка: Мини-игра Динозаврик */
-.dino-card {
-  padding: 16px;
-  border-radius: 16px;
-  background: linear-gradient(145deg, rgba(19, 19, 25, 0.74) 0%, rgba(12, 12, 16, 0.7) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.68), inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  text-align: left;
-}
-
-.dino-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 12px;
-}
-
-.dino-title-group {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.dino-title {
-  font-family: 'Consolas', 'Courier New', monospace;
-  font-size: 13.5px;
-  font-weight: 700;
-  letter-spacing: 1.4px;
-  color: #ffffff;
-}
-
-.dino-subtitle {
-  font-size: 11px;
-  color: #9ca3af;
-}
-
-.dino-scores {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-family: 'Consolas', 'Courier New', monospace;
-  font-size: 12.5px;
-  font-variant-numeric: tabular-nums;
-  color: #a1a1aa;
-}
-
-.dino-scores strong {
-  color: #818cf8;
-}
-
-#dino-score {
-  color: #f9fafb;
-  font-weight: 700;
-}
-
-.dino-stage {
-  position: relative;
-  width: 100%;
-  height: 175px;
-  border-radius: 12px;
-  overflow: hidden;
-  cursor: pointer;
-  touch-action: manipulation;
-  background: rgba(8, 8, 12, 0.75);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-#dino-canvas {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-
-.dino-overlay-msg {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  padding: 0 12px;
-  background: rgba(5, 5, 8, 0.46);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-  text-align: center;
-  transition: opacity 0.25s ease, visibility 0.25s ease;
-}
-
-.dino-overlay-msg.hidden-msg {
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-}
-
-#dino-msg-title {
-  font-size: 13.5px;
-  font-weight: 700;
-  color: #ffffff;
-}
-
-#dino-msg-sub {
-  font-size: 11.5px;
-  color: #a1a1aa;
-}
-
-.footer {
-  margin-top: 28px;
-  font-size: 13px;
-  color: #52525b;
-}
-
-/* Адаптация под мобильные устройства (определяется автоматически в JS + медиазапросы) */
-body.is-mobile {
-  overflow-y: auto;
-  padding: 96px 14px 48px;
-}
-
-body.is-mobile .top-player-wrap {
-  padding-right: 92px;
-  justify-content: flex-start;
-}
-
-body.is-mobile .top-player {
-  cursor: default;
-}
-
-body.is-mobile .views-badge {
-  top: 16px;
-  right: 12px;
-  padding: 6px 10px;
-}
-
-body.is-mobile .tab-nav-rail {
-  right: 8px;
-}
-
-body.is-mobile .wheel-hint span {
-  display: none;
-}
-
-body.is-mobile .blizzard-badge {
-  left: 12px;
-  bottom: 12px;
-  padding: 6px 10px;
-  font-size: 11.5px;
-}
-
-@media (max-width: 520px) {
-  .tab-nav-rail {
-    right: 8px;
-  }
-  .wheel-hint span {
-    display: none;
-  }
-  .avatar-img {
-    width: 84px;
-    height: 84px;
-  }
-  .links {
-    gap: 11px;
-  }
-  .link-btn {
-    padding: 13px 16px;
-    font-size: 15px;
-  }
-}
+    border-color 0.25

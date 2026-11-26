@@ -419,6 +419,36 @@ document.addEventListener('DOMContentLoaded', () => {
     audio.play().catch(() => {});
   });
 
+  // 1.3. Пасхалка: 4 клика по © 2026 или набор "hack" включают хакерский режим / сканлайн
+  const footerCopyright = document.getElementById('footer-copyright');
+  let copyrightClicks = 0;
+  let copyrightClickTimer = null;
+  let hackerModeTimeout = null;
+  let typedSecretBuffer = '';
+
+  function triggerHackerEasterEgg(durationMs = 4200) {
+    document.body.classList.add('hacker-mode');
+    clearTimeout(hackerModeTimeout);
+    hackerModeTimeout = setTimeout(() => {
+      document.body.classList.remove('hacker-mode');
+    }, durationMs);
+  }
+
+  if (footerCopyright) {
+    footerCopyright.addEventListener('click', () => {
+      copyrightClicks += 1;
+      clearTimeout(copyrightClickTimer);
+      copyrightClickTimer = setTimeout(() => {
+        copyrightClicks = 0;
+      }, 1500);
+
+      if (copyrightClicks >= 4) {
+        copyrightClicks = 0;
+        triggerHackerEasterEgg(4200);
+      }
+    });
+  }
+
   // 1.4. Пасхалка: 5 кликов по аватарке запускают плавную метель, остановка на Q
   const mainAvatar = document.getElementById('main-avatar');
   const blizzardBadge = document.getElementById('blizzard-badge');
@@ -463,18 +493,14 @@ document.addEventListener('DOMContentLoaded', () => {
     blizzardBadge.addEventListener('click', stopBlizzard);
   }
 
-  window.addEventListener('keydown', (e) => {
-    if (e.code === 'KeyQ' || e.key === 'q' || e.key === 'Q' || e.key === 'й' || e.key === 'Й') {
-      if (blizzardTargetIntensity > 0 || blizzardCurrentIntensity > 0.05) {
-        stopBlizzard();
-      }
-    }
-  });
+  // Хуки для реакции снега и частиц при переключении вкладок (объявляются до switchTab)
+  let onTabSwitchedEffect = null;
 
-  // 1.5. Переключение между вкладкой профиля и мини-игрой по колёсику мыши, свайпу или точкам справа
+  // 1.5. Переключение между вкладками по колёсику мыши, свайпу или точкам справа
   const tabPanels = [
     document.getElementById('tab-profile'),
-    document.getElementById('tab-dino')
+    document.getElementById('tab-dino'),
+    document.getElementById('tab-lofi')
   ];
   const tabDots = document.querySelectorAll('.tab-dot');
   const wheelHint = document.getElementById('wheel-hint');
@@ -482,8 +508,10 @@ document.addEventListener('DOMContentLoaded', () => {
   let lastWheelSwitchTime = 0;
 
   function switchTab(nextIndex) {
-    if (nextIndex < 0 || nextIndex >= tabPanels.length || nextIndex === activeTabIndex) return;
-    activeTabIndex = nextIndex;
+    const total = tabPanels.length;
+    const normalized = ((nextIndex % total) + total) % total;
+    if (normalized === activeTabIndex) return;
+    activeTabIndex = normalized;
 
     tabPanels.forEach((panel, idx) => {
       panel.classList.toggle('active', idx === activeTabIndex);
@@ -498,6 +526,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (activeTabIndex === 1) {
       resizeDinoCanvas();
+    }
+
+    if (typeof onTabSwitchedEffect === 'function') {
+      onTabSwitchedEffect(activeTabIndex);
     }
   }
 
@@ -517,9 +549,9 @@ document.addEventListener('DOMContentLoaded', () => {
     lastWheelSwitchTime = now;
 
     if (e.deltaY > 0) {
-      switchTab(activeTabIndex === 0 ? 1 : 0);
+      switchTab(activeTabIndex + 1);
     } else {
-      switchTab(activeTabIndex === 1 ? 0 : 1);
+      switchTab(activeTabIndex - 1);
     }
   }, { passive: true });
 
@@ -535,7 +567,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const diffY = touchStartY - e.changedTouches[0].clientY;
     touchStartY = null;
     if (Math.abs(diffY) > 55) {
-      switchTab(diffY > 0 ? 1 : 0);
+      switchTab(diffY > 0 ? activeTabIndex + 1 : activeTabIndex - 1);
     }
   }, { passive: true });
 
@@ -571,7 +603,6 @@ document.addEventListener('DOMContentLoaded', () => {
   resizeDinoCanvas();
   window.addEventListener('resize', resizeDinoCanvas);
 
-  // Лёгкие 8-битные звуки через Web Audio API (без внешних файлов)
   let sfxCtx = null;
   function playDinoSound(type) {
     try {
@@ -729,6 +760,20 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   window.addEventListener('keydown', (e) => {
+    if (e.code === 'KeyQ' || e.key === 'q' || e.key === 'Q' || e.key === 'й' || e.key === 'Й') {
+      if (blizzardTargetIntensity > 0 || blizzardCurrentIntensity > 0.05) {
+        stopBlizzard();
+      }
+    }
+
+    if (e.key && e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      typedSecretBuffer = (typedSecretBuffer + e.key.toLowerCase()).slice(-8);
+      if (typedSecretBuffer.endsWith('hack')) {
+        typedSecretBuffer = '';
+        triggerHackerEasterEgg(4200);
+      }
+    }
+
     if (activeTabIndex !== 1) return;
     if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') {
       e.preventDefault();
@@ -750,7 +795,6 @@ document.addEventListener('DOMContentLoaded', () => {
     dinoCtx.fillStyle = '#f3f4f6';
 
     if (p.ducking && p.grounded) {
-      // Пригнувшийся динозавр
       dinoCtx.beginPath();
       dinoCtx.roundRect(p.x - 4, p.y + 4, p.w + 7, 11, 4);
       dinoCtx.roundRect(p.x + p.w - 2, p.y + 3, 11, 9, 3);
@@ -764,7 +808,6 @@ document.addEventListener('DOMContentLoaded', () => {
       dinoCtx.fillRect(p.x + 2, p.y + 14 + step, 4, 4 - step);
       dinoCtx.fillRect(p.x + 11, p.y + 14 - step, 4, 4 + step);
     } else {
-      // Обычный бегущий / прыгающий динозавр
       dinoCtx.beginPath();
       dinoCtx.roundRect(p.x, p.y + 7, p.w - 4, p.h - 11, 4);
       dinoCtx.roundRect(p.x + 7, p.y, p.w - 7, 12, 4);
@@ -782,7 +825,6 @@ document.addEventListener('DOMContentLoaded', () => {
     dinoCtx.restore();
   }
 
-  // Классический зелёный кактус обычного цвета
   function drawCactus(c) {
     dinoCtx.save();
     dinoCtx.fillStyle = '#2e8b57';
@@ -801,7 +843,6 @@ document.addEventListener('DOMContentLoaded', () => {
     dinoCtx.fill();
     dinoCtx.stroke();
 
-    // Светлая полоска объёма и пара мелких колючек
     dinoCtx.fillStyle = '#3ca368';
     dinoCtx.fillRect(trunkX + 1.5, c.y + 3, 1.5, c.h - 6);
     dinoCtx.restore();
@@ -812,7 +853,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const flap = Math.sin(timeMs * 0.022 + b.phase) > 0;
     dinoCtx.fillStyle = '#9ca3af';
 
-    // Тело и клюв птицы
     dinoCtx.beginPath();
     dinoCtx.roundRect(b.x + 4, b.y + 6, b.w - 8, 7, 3);
     dinoCtx.fill();
@@ -825,7 +865,6 @@ document.addEventListener('DOMContentLoaded', () => {
     dinoCtx.closePath();
     dinoCtx.fill();
 
-    // Взмах крыла
     dinoCtx.fillStyle = '#e5e7eb';
     dinoCtx.beginPath();
     if (flap) {
@@ -846,7 +885,6 @@ document.addEventListener('DOMContentLoaded', () => {
     dinoCtx.clearRect(0, 0, dinoW, dinoH);
     const groundY = dinoH - GROUND_OFFSET;
 
-    // Плавный цикл день / ночь каждые 250 очков
     const isNightTarget = Math.floor(dinoState.score / 250) % 2 === 1 ? 1 : 0;
     dinoState.nightFactor += (isNightTarget - dinoState.nightFactor) * 0.03;
 
@@ -855,7 +893,6 @@ document.addEventListener('DOMContentLoaded', () => {
       dinoCtx.fillStyle = `rgba(15, 23, 42, ${dinoState.nightFactor * 0.48})`;
       dinoCtx.fillRect(0, 0, dinoW, dinoH);
 
-      // Луна и звёзды ночью
       dinoCtx.fillStyle = `rgba(241, 245, 249, ${dinoState.nightFactor * 0.78})`;
       dinoCtx.beginPath();
       dinoCtx.arc(dinoW - 44, 28, 8, 0, Math.PI * 2);
@@ -878,7 +915,6 @@ document.addEventListener('DOMContentLoaded', () => {
       p.y = groundY - p.h;
     }
 
-    // Линия земли и камешки
     dinoCtx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
     dinoCtx.lineWidth = 1.5;
     dinoCtx.beginPath();
@@ -913,7 +949,6 @@ document.addEventListener('DOMContentLoaded', () => {
         spawnDinoDust(p.x + 2, groundY, 1);
       }
 
-      // Спавн кактусов или птиц
       dinoState.nextSpawnFrames -= 1;
       if (dinoState.nextSpawnFrames <= 0) {
         const canSpawnBird = dinoState.score >= 120 && Math.random() < 0.3;
@@ -944,7 +979,6 @@ document.addEventListener('DOMContentLoaded', () => {
         dinoState.nextSpawnFrames = Math.max(42, Math.floor(70 + Math.random() * 45 - dinoState.speed * 2));
       }
 
-      // Движение препятствий и проверка столкновений
       for (let i = dinoState.obstacles.length - 1; i >= 0; i--) {
         const ob = dinoState.obstacles[i];
         ob.x -= ob.kind === 'bird' ? dinoState.speed * 1.12 : dinoState.speed;
@@ -987,7 +1021,6 @@ document.addEventListener('DOMContentLoaded', () => {
       dinoScoreEl.textContent = String(wholeScore).padStart(4, '0');
     }
 
-    // Пылинки из-под лап
     for (let i = dinoState.dust.length - 1; i >= 0; i--) {
       const d = dinoState.dust[i];
       d.x += d.vx;
@@ -1010,6 +1043,79 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
     drawDinoCharacter(p, timeMs);
+  }
+
+  // 1.7. Сбоящий виниловый диск на 3-й вкладке (крутится, моментами зависает и сбоит)
+  const lofiCard = document.querySelector('.lofi-card');
+  const vinylDisc = document.getElementById('vinyl-disc');
+  const discStatusLabel = document.getElementById('disc-status-label');
+
+  let discAngle = 0;
+  let lastDiscFrameMs = null;
+  let glitchState = 'none'; // 'none' | 'stall' | 'rewind' | 'jitter'
+  let glitchUntilMs = 0;
+  let nextGlitchCheckMs = 0;
+
+  function stepAndRenderVinylDisc(timeMs) {
+    if (!vinylDisc) return;
+    if (lastDiscFrameMs === null) lastDiscFrameMs = timeMs;
+    const dt = Math.min(0.05, Math.max(0, (timeMs - lastDiscFrameMs) / 1000));
+    lastDiscFrameMs = timeMs;
+
+    if (timeMs >= nextGlitchCheckMs) {
+      if (glitchState === 'none') {
+        const roll = Math.random();
+        if (roll < 0.22) {
+          glitchState = 'stall';
+          glitchUntilMs = timeMs + 260 + Math.random() * 520;
+          if (discStatusLabel) discStatusLabel.textContent = 'GLITCH · STALL';
+        } else if (roll < 0.36) {
+          glitchState = 'rewind';
+          glitchUntilMs = timeMs + 180 + Math.random() * 240;
+          if (discStatusLabel) discStatusLabel.textContent = 'GLITCH · SKIP BACK';
+        } else if (roll < 0.48) {
+          glitchState = 'jitter';
+          glitchUntilMs = timeMs + 220 + Math.random() * 320;
+          if (discStatusLabel) discStatusLabel.textContent = 'GLITCH · WOBBLE';
+        } else {
+          nextGlitchCheckMs = timeMs + 1100 + Math.random() * 1700;
+        }
+      } else if (timeMs >= glitchUntilMs) {
+        glitchState = 'none';
+        nextGlitchCheckMs = timeMs + 1400 + Math.random() * 2200;
+        if (discStatusLabel) discStatusLabel.textContent = 'SPINNING · LO-FI';
+      }
+    }
+
+    if (lofiCard) {
+      lofiCard.classList.toggle('is-glitching', glitchState !== 'none');
+    }
+
+    let offsetX = 0;
+    let offsetY = 0;
+    let scale = 1;
+
+    if (glitchState === 'none') {
+      discAngle = (discAngle + dt * 135) % 360;
+    } else if (glitchState === 'stall') {
+      // Диск почти зависает с лёгким микро-дрожанием иглы
+      discAngle = (discAngle + dt * 6) % 360;
+      offsetX = (Math.random() - 0.5) * 2.2;
+      offsetY = (Math.random() - 0.5) * 2.2;
+    } else if (glitchState === 'rewind') {
+      // Сбой со скачком назад
+      discAngle = (discAngle - dt * 290 + 360) % 360;
+      offsetX = (Math.random() - 0.5) * 3.5;
+      scale = 0.985;
+    } else if (glitchState === 'jitter') {
+      // Рваный сбой скорости
+      discAngle = (discAngle + dt * (Math.random() < 0.5 ? 360 : 25)) % 360;
+      offsetX = (Math.random() - 0.5) * 3;
+      offsetY = (Math.random() - 0.5) * 2.5;
+    }
+
+    vinylDisc.style.transform =
+      `translate3d(${offsetX.toFixed(1)}px, ${offsetY.toFixed(1)}px, 0) scale(${scale}) rotate(${discAngle.toFixed(1)}deg)`;
   }
 
   // 2. Плавное перемещение проигрывателя по экрану с интерполяцией
@@ -1521,6 +1627,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (activeTabIndex === 1) {
       stepAndRenderDino(timeMs);
+    } else if (activeTabIndex === 2) {
+      stepAndRenderVinylDisc(timeMs);
     }
 
     const progFactor = isScrubbing ? 0.65 : 0.18;
@@ -1581,7 +1689,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   requestAnimationFrame(renderSlidersAndParticles);
 
-  // 8. Анимация снежинок на фоне и за курсором + плавная метель (пасхалка)
+  // 8. Анимация снежинок на фоне, реакция на вкладки, метель и за курсором
   const canvas = document.getElementById('snow-canvas');
   const ctx = canvas.getContext('2d');
 
@@ -1598,6 +1706,35 @@ document.addEventListener('DOMContentLoaded', () => {
   const cursorSnow = [];
   const BASE_AMBIENT_COUNT = 95;
   const MAX_BLIZZARD_COUNT = 260;
+
+  // Плотность и порыв ветра при переключении вкладок
+  const TAB_SNOW_DENSITY = [1.0, 1.35, 0.78]; // профиль, Dino Run, Lo-Fi
+  let tabDensityTarget = TAB_SNOW_DENSITY[0];
+  let tabDensityCurrent = TAB_SNOW_DENSITY[0];
+  let tabGustBoost = 0;
+
+  onTabSwitchedEffect = (tabIdx) => {
+    tabDensityTarget = TAB_SNOW_DENSITY[tabIdx] ?? 1.0;
+    tabGustBoost = 1.0;
+    spawnProgressParticles(8, true);
+
+    const cx = width * 0.5;
+    const cy = height * 0.45;
+    for (let i = 0; i < 18; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const spd = 1.2 + Math.random() * 2.4;
+      cursorSnow.push({
+        x: cx + (Math.random() - 0.5) * 90,
+        y: cy + (Math.random() - 0.5) * 90,
+        speedX: Math.cos(angle) * spd + 1.1,
+        speedY: Math.sin(angle) * spd + 0.6,
+        radius: Math.random() * 2.4 + 1.0,
+        opacity: 0.85,
+        decay: Math.random() * 0.018 + 0.014,
+        swirl: (Math.random() - 0.5) * 0.08
+      });
+    }
+  };
 
   function createAmbientFlake(randomY = true) {
     return {
@@ -1694,15 +1831,24 @@ document.addEventListener('DOMContentLoaded', () => {
   function animate(timeMs = 0) {
     ctx.clearRect(0, 0, width, height);
 
-    // Плавное нарастание и затухание метели
     blizzardCurrentIntensity += (blizzardTargetIntensity - blizzardCurrentIntensity) * 0.025;
     if (blizzardTargetIntensity === 0 && blizzardCurrentIntensity < 0.004) {
       blizzardCurrentIntensity = 0;
     }
 
-    // Обычные снежинки ускоряются и отклоняются ветром во время метели
-    const windBoostX = blizzardCurrentIntensity * 4.2 + Math.sin(timeMs * 0.0022) * 1.1 * blizzardCurrentIntensity;
-    const windBoostY = 1 + blizzardCurrentIntensity * 2.4;
+    tabDensityCurrent += (tabDensityTarget - tabDensityCurrent) * 0.04;
+    tabGustBoost *= 0.94;
+
+    const windBoostX =
+      blizzardCurrentIntensity * 4.2 +
+      Math.sin(timeMs * 0.0022) * 1.1 * blizzardCurrentIntensity +
+      tabGustBoost * 2.2;
+    const windBoostY = 1 + blizzardCurrentIntensity * 2.4 + tabGustBoost * 0.9;
+
+    const activeAmbientCount = Math.max(
+      35,
+      Math.min(ambientSnow.length, Math.round(BASE_AMBIENT_COUNT * tabDensityCurrent))
+    );
 
     for (let i = 0; i < ambientSnow.length; i++) {
       const f = ambientSnow[i];
@@ -1717,11 +1863,11 @@ document.addEventListener('DOMContentLoaded', () => {
       if (f.x > width + 10) f.x = -8;
       if (f.x < -10) f.x = width + 8;
 
-      const streak = blizzardCurrentIntensity * 2.2;
-      drawFlake(f.x, f.y, f.radius, f.opacity, streak, streak * 0.65);
+      const visibleFactor = i < activeAmbientCount ? 1 : 0.35;
+      const streak = blizzardCurrentIntensity * 2.2 + tabGustBoost * 1.1;
+      drawFlake(f.x, f.y, f.radius, f.opacity * visibleFactor, streak, streak * 0.65);
     }
 
-    // Дополнительные плотные снежинки метели
     const desiredBlizzardCount = Math.floor(MAX_BLIZZARD_COUNT * blizzardCurrentIntensity);
     while (blizzardSnow.length < desiredBlizzardCount) {
       spawnBlizzardFlake();
@@ -1753,7 +1899,6 @@ document.addEventListener('DOMContentLoaded', () => {
       drawFlake(bf.x, bf.y, bf.radius, drawAlpha, streakX, streakY);
     }
 
-    // Снежинки за курсором
     for (let i = cursorSnow.length - 1; i >= 0; i--) {
       const p = cursorSnow[i];
       if (p.swirl) {

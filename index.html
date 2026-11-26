@@ -10,6 +10,9 @@
   <!-- Холст для снежинок на фоне и за курсором -->
   <canvas id="snow-canvas"></canvas>
 
+  <!-- Оверлей сканлайна для хакерской пасхалки -->
+  <div id="hacker-scanlines" class="hacker-scanlines" aria-hidden="true"></div>
+
   <!-- Подсказка остановки пасхалки-метели в нижнем левом углу -->
   <button id="blizzard-badge" class="blizzard-badge" type="button" aria-label="Остановить метель">
     <kbd>Q</kbd>
@@ -118,7 +121,7 @@
     </div>
   </header>
 
-  <!-- Навигация справа: две пульсирующие точки + подсказка с иконкой колесика / свайпа -->
+  <!-- Навигация справа: три пульсирующие точки + подсказка с иконкой колесика / свайпа -->
   <aside id="tab-nav-rail" class="tab-nav-rail hidden" aria-label="Переключение вкладок">
     <div id="wheel-hint" class="wheel-hint" aria-hidden="true">
       <svg class="wheel-mouse-icon desktop-only-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -136,6 +139,7 @@
     <div class="tab-dots-pill">
       <button type="button" class="tab-dot active" data-tab="0" aria-label="Профиль и ссылки"></button>
       <button type="button" class="tab-dot" data-tab="1" aria-label="Мини-игра Динозаврик"></button>
+      <button type="button" class="tab-dot" data-tab="2" aria-label="Lo-Fi и виниловый диск"></button>
     </div>
   </aside>
 
@@ -234,7 +238,49 @@
       </div>
     </section>
 
-    <footer class="footer flip-item" style="--delay: 0.70s;">
+    <!-- Вкладка 3: Lo-Fi статус с улетающими zzzzz и сбоящий виниловый диск -->
+    <section id="tab-lofi" class="tab-panel" aria-label="Lo-Fi атмосфера и проигрыватель диска">
+      <div class="lofi-card">
+        <div class="lofi-layout">
+          <div class="lofi-info">
+            <div class="lofi-status-pill">
+              <span class="lofi-pulse-dot" aria-hidden="true"></span>
+              <span>LO-FI MODE</span>
+            </div>
+
+            <div class="lofi-text-wrap">
+              <p class="lofi-caption">слушаю lo fi музыку</p>
+              <div class="lofi-z-stream" aria-hidden="true">
+                <span class="zzz-char" style="--z-delay: 0s; --z-size: 12px; --z-x: 0px;">z</span>
+                <span class="zzz-char" style="--z-delay: 0.45s; --z-size: 14px; --z-x: 5px;">z</span>
+                <span class="zzz-char" style="--z-delay: 0.9s; --z-size: 16px; --z-x: 10px;">z</span>
+                <span class="zzz-char" style="--z-delay: 1.35s; --z-size: 18px; --z-x: 15px;">z</span>
+                <span class="zzz-char" style="--z-delay: 1.8s; --z-size: 20px; --z-x: 20px;">z</span>
+              </div>
+            </div>
+
+            <div id="disc-glitch-status" class="disc-glitch-status">
+              <span class="disc-status-indicator"></span>
+              <span id="disc-status-label">SPINNING · 33 RPM</span>
+            </div>
+          </div>
+
+          <div class="vinyl-deck" aria-label="Сбоящий виниловый проигрыватель">
+            <div id="vinyl-disc" class="vinyl-disc">
+              <div class="vinyl-grooves"></div>
+              <div class="vinyl-sheen"></div>
+              <div class="vinyl-label">
+                <img src="cover.jpg" alt="Обложка диска">
+              </div>
+              <div class="vinyl-spindle"></div>
+            </div>
+            <div id="tonearm" class="tonearm"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer id="footer-copyright" class="footer flip-item" style="--delay: 0.70s;" title="Кликни 4 раза или напиши hack">
       <span>© 2026</span>
     </footer>
   </main>
